@@ -1,0 +1,2 @@
+# Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss
+Federated learning framework for decentralized path-loss prediction in LoRaWAN IoT networks. Edge nodes collaboratively train ML models using environmental sensor data (temperature, humidity, CO₂, PM) without sharing raw data — enabling privacy-preserving, on-device intelligence for indoor signal reliability.
