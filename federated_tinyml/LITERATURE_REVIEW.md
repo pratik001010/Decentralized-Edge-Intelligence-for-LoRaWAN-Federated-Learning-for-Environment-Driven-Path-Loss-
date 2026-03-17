@@ -5,17 +5,6 @@
 - Authors: Oscar Torres Sanchez, Guilherme Borges, Duarte Raposo, Andre Rodrigues, Fernando Boavida, Jorge Sa Silva (University of Coimbra, Portugal)
 - Published: arXiv:2410.11612v1, October 2024
 
----
-
-## Problem addressed
-Traditional ML for anomaly detection usually depends on large data uploads to centralized servers. In LoRaWAN settings, this becomes difficult due to strict payload limits, duty-cycle restrictions, and low bandwidth.
-
-Core research questions in the paper:
-1. Can FL work inside LoRaWAN constraints without major accuracy loss?
-2. How many LoRaWAN messages and training hours are actually needed?
-3. What is the best round/epoch balance for FL in constrained networks?
-
----
 
 ## Experimental setup
 - Devices: 4 IIoT prototype devices monitoring real civil construction machinery (Manitou multifunctions, Atlas Copco drill, Jaw Crusher, Doosan wheel loader) at a real construction site in Vilar Formoso, Portugal.
@@ -26,17 +15,7 @@ Core research questions in the paper:
 
 ---
 
-## How FL works in this paper
-1. Server initializes and distributes a global model (optimized AE structure).
-2. Each client trains locally on its own machine data only (raw data stays local).
-3. Clients send local model updates (Delta theta_i) back to the server.
-4. Server aggregates using FedAvg:
 
-   theta_(t+1) = sum(i=1..N) (n_i / N) * Delta theta_i
-
-5. Updated global model is redistributed; cycle repeats for N rounds.
-
----
 
 ## Key quantitative results
 
@@ -121,14 +100,14 @@ This reviewed paper supports the methodological foundation for:
 - selecting practical round/epoch schedules
 - shrinking model size for real edge deployment
 
-It is directly useful as a protocol-and-systems reference while your thesis application focus remains:
+It is directly useful as a protocol-and-systems reference while our thesis application focus remains:
 Decentralized Edge Intelligence for LoRaWAN: Federated Learning for Environment-Driven Path Loss and Link Quality Modeling.
 
 
-https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/83aef0bfd7c25b2ed670212028a70b6d7b3cee25/pics/1.1.png
+![](https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/83aef0bfd7c25b2ed670212028a70b6d7b3cee25/pics/1.1.png)
 
 
-https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/83aef0bfd7c25b2ed670212028a70b6d7b3cee25/pics/1.2.png
+![](https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/83aef0bfd7c25b2ed670212028a70b6d7b3cee25/pics/1.2.png)
 
-https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/83aef0bfd7c25b2ed670212028a70b6d7b3cee25/pics/1.3.png
+![](https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/83aef0bfd7c25b2ed670212028a70b6d7b3cee25/pics/1.3.png)
 
