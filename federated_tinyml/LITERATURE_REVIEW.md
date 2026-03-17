@@ -123,3 +123,16 @@ This reviewed paper supports the methodological foundation for:
 
 It is directly useful as a protocol-and-systems reference while your thesis application focus remains:
 Decentralized Edge Intelligence for LoRaWAN: Federated Learning for Environment-Driven Path Loss and Link Quality Modeling.
+
+---
+https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/83aef0bfd7c25b2ed670212028a70b6d7b3cee25/pics/1.1.png
+
+---
+
+https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/83aef0bfd7c25b2ed670212028a70b6d7b3cee25/pics/1.2.png
+
+---
+
+https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/83aef0bfd7c25b2ed670212028a70b6d7b3cee25/pics/1.3.png
+
+---
