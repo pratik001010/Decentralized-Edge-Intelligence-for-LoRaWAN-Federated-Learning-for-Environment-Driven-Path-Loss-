@@ -12,27 +12,87 @@ How to update this file each day
 
 ## 2026-03-18
 
-Project work completed
-- Performed full-file profiling of both datasets:
+Detailed two-CSV discussion record
+- Primary files reviewed:
   - 1.unsorted_combined_measurements_data.csv
   - 2.aggregated_measurements_data.csv
-- Verified schema, row counts, missingness, duplicates, value ranges, and time coverage.
-- Confirmed pressure scaling issue and validated correction rule:
-  - pressure_hPa = pressure * 3.125
-- Identified deterministic anomaly families in aggregated data (total 33 rows):
-  - Pattern A: 19 rows
-  - Pattern B: 2 rows
-  - Pattern C: 12 rows
-- Confirmed device identity rule in raw data:
-  - Use end_device_ids_device_id for per-node identity, not device_id.
-- Added dataset audit summary into FederatedTinyML/README.md.
-- Updated train_model.py to use real aggregated dataset by default with safe preprocessing:
-  - Uses 2.aggregated_measurements_data.csv by default
-  - Drops 33 known bad rows
-  - Applies pressure correction (x3.125)
-  - Drops rows with null snr and f_count
-  - Sorts by time when available
-  - Derives labels from RSSI/SNR if link_state is absent
+- Analysis mode used:
+  - Full-file profiling (not sample-only), chunked reads for memory safety.
+  - Header/schema inspection, row counts, file sizes, type/range checks, missing-value checks, duplicate-key checks, time parsing checks, and outlier extraction.
+
+Two-file baseline facts
+- Unsorted raw file:
+  - Size: 1,952,502,329 bytes
+  - Columns: 81
+  - Rows: 2,313,903
+  - Character: TTN-style raw payload and metadata export.
+- Aggregated file:
+  - Size: 297,698,840 bytes
+  - Columns: 20
+  - Rows: 1,715,869
+  - Character: compact modeling table for ML.
+
+Schema and identity conclusions
+- Raw unsorted file includes wide metadata (`rx_metadata_*`, network IDs, device version fields).
+- Aggregated file keeps modeling columns (`co2`, `humidity`, `pm25`, `pressure`, `temperature`, `rssi`, `snr`, `distance`, `exp_pl`, etc.).
+- In unsorted raw data, `device_id` is not the true per-node field.
+- True per-node identity in unsorted raw is `end_device_ids_device_id`.
+- Aggregated dataset has normalized IDs (`ED0` to `ED5`).
+
+Time and ordering findings
+- Shared broad time coverage across both files:
+  - Start: 2024-09-26 11:00:52.541686+00:00
+  - End: 2025-05-22 14:56:11.322763+00:00
+- Time parse failures:
+  - Unsorted raw: 2
+  - Aggregated: 0
+- Aggregated file is not globally monotonic by time, so explicit sort is required before split/training.
+
+Missingness and duplicate checks
+- Unsorted raw:
+  - Missing snr: 2,044
+  - Missing uplink_message_f_cnt: 20
+  - Duplicate key rows on [time, end_device_ids_device_id, uplink_message_f_cnt]: 1,032
+- Aggregated:
+  - Missing snr: 1,427
+  - Missing f_count: 19
+  - Duplicate key rows on [time, device_id, f_count]: 0
+
+Critical data quality findings discussed
+- Pressure scaling issue in both files:
+  - Stored pressure values are in compressed scale (~299 to ~342 typical).
+  - Corrected pressure rule: pressure_hPa = pressure * 3.125.
+  - Validation check: ~99.998% of aggregated rows fall into 800 to 1200 hPa after scaling.
+- Deterministic bad rows in aggregated file:
+  - Total: 33 rows
+  - Pattern A: 19 rows (`co2=21547`, `humidity=156.65`, `temperature=174.90`, `pressure=3.21`, `pm25=33.93`)
+  - Pattern B: 2 rows (`co2=16724`, `humidity=210.53`, `temperature=110.76`, `pressure=317.45`, `pm25=125.57`)
+  - Pattern C: 12 rows (`co2=0`, `humidity=0`, `temperature=0`, `pressure=508.90`, `pm25=0`)
+  - Decision taken: remove all 33 rows (no imputation).
+
+Final decisions recorded from discussion
+- Use aggregated file as default model-training source.
+- Keep unsorted raw file as source-of-truth for trace-back and audit.
+- Mandatory preprocessing agreed:
+  - Remove 33 known anomaly rows.
+  - Apply pressure correction (x3.125).
+  - Drop rows with null `snr` and `f_count` for supervised link-quality training.
+  - Sort by `time` before train/validation/test splitting.
+  - Log row counts before and after each cleaning step.
+
+Code integration completed in train_model.py
+- Real data path enabled by default (`2.aggregated_measurements_data.csv`).
+- Deterministic anomaly filters (Pattern A/B/C) implemented.
+- Pressure correction implemented.
+- Null filtering (`snr`, `f_count`) implemented.
+- Time parse and sort implemented when `time` exists.
+- Label generation from `rssi` and `snr` implemented when `link_state` is absent.
+- Loader now prints preprocessing summary (raw rows, removed anomalies, dropped null rows, final rows).
+
+Documentation updates completed
+- Added full dataset audit section to `FederatedTinyML/README.md`.
+- Added corresponding summary to root `README.md`.
+- Added daily log framework in `Everyday Updates.md` for ongoing tracking.
 
 Repository and sync work completed
 - First push attempt failed because CSV files exceeded GitHub 100 MB limit.
