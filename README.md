@@ -22,12 +22,86 @@
 12. [Configuration Parameters](#configuration-parameters)
 13. [Troubleshooting](#troubleshooting)
 14. [References](#references)
+15. [Dataset Audit (Two CSV Files)](#dataset-audit-two-csv-files)
+16. [Daily Progress Tracker](#daily-progress-tracker)
 
 ---
 
 # Project Overview
 
 This project evolves a LoRaWAN-based environmental monitoring system from a **centralized data collection approach** to a **distributed federated learning system** where each edge device (Arduino MKR WAN 1310) becomes an intelligent node capable of on-device machine learning.
+
+---
+
+# Dataset Audit (Two CSV Files)
+
+This repository uses two related but different datasets:
+
+- `federated_tinyml/1.unsorted_combined_measurements_data.csv`
+- `federated_tinyml/2.aggregated_measurements_data.csv`
+
+## What they are
+
+- **Unsorted combined measurements data** is the raw TTN-style export with wide metadata and gateway fields.
+- **Aggregated measurements data** is the compact modeling table used for training and analysis.
+
+## Verified differences and facts
+
+1. **Structure and size**
+  - Unsorted: 81 columns, 2,313,903 rows, ~1.95 GB.
+  - Aggregated: 20 columns, 1,715,869 rows, ~298 MB.
+
+2. **Device identity semantics**
+  - In raw unsorted data, `device_id` is not the true per-node key.
+  - The true raw per-node key is `end_device_ids_device_id`.
+  - Aggregated data is already normalized to IDs like `ED0` to `ED5`.
+
+3. **Duplicates**
+  - Raw unsorted has duplicate events on practical key `[time, end_device_ids_device_id, uplink_message_f_cnt]` (1,032 rows).
+  - Aggregated has no duplicates on `[time, device_id, f_count]`.
+
+4. **Critical scale issue found**
+  - Pressure values are stored in a compressed scale.
+  - Required correction: `pressure_hPa = pressure * 3.125`.
+
+5. **Deterministic anomalies in aggregated data**
+  - Total known bad rows: 33.
+  - Pattern A: 19 rows.
+  - Pattern B: 2 rows.
+  - Pattern C: 12 rows.
+  - These rows are removed in preprocessing (not imputed).
+
+6. **Missingness and time**
+  - Aggregated has missing `snr` and a small number of missing `f_count` values.
+  - Both files cover the same broad date span.
+  - Aggregated data must be sorted by time before training splits.
+
+## How this is used in code
+
+- `federated_tinyml/train_model.py` now defaults to the aggregated dataset.
+- Real-data preprocessing now applies:
+  - anomaly row removal,
+  - pressure correction,
+  - null filtering (`snr`, `f_count`),
+  - optional time sorting,
+  - label derivation from `rssi` and `snr` when `link_state` is absent.
+
+---
+
+# Daily Progress Tracker
+
+Daily updates are tracked in:
+
+- `federated_tinyml/Everyday Updates.md`
+
+This file logs:
+
+- what was implemented each day,
+- what was pushed to GitHub each day,
+- key commit references,
+- blockers and next actions.
+
+Use it as the single source of daily project history.
 
 ---
 
