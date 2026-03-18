@@ -271,6 +271,82 @@ Based on literature and similar deployments:
 
 ---
 
+## Dataset Audit Summary
+
+This section summarizes the full profiling and consistency checks performed on:
+
+- `1.unsorted_combined_measurements_data.csv`
+- `2.aggregated_measurements_data.csv`
+
+### File-level comparison
+
+| Property | Unsorted raw file | Aggregated file |
+|----------|-------------------|-----------------|
+| Path | `1.unsorted_combined_measurements_data.csv` | `2.aggregated_measurements_data.csv` |
+| Rows | 2,313,903 | 1,715,869 |
+| Columns | 81 | 20 |
+| Size | 1,952,502,329 bytes | 297,698,840 bytes |
+| Character | TTN-style raw export with metadata | Curated ML-ready table |
+
+### Key differences
+
+1. **Schema and purpose**
+  - Unsorted file contains expanded TTN metadata (`rx_metadata_*`, IDs, payload internals, network fields).
+  - Aggregated file contains compact modeling columns (`co2`, `humidity`, `pm25`, `pressure`, `temperature`, `rssi`, `snr`, `distance`, `exp_pl`, etc.).
+
+2. **Device identity semantics**
+  - In unsorted raw, `device_id` is not the per-node identity (1 unique value).
+  - True per-node identity in raw data is `end_device_ids_device_id` (7 unique values).
+  - Aggregated file uses normalized device IDs (`ED0` to `ED5`, 6 devices).
+
+3. **Duplicates**
+  - Raw unsorted has 1,032 duplicate rows on practical key `[time, end_device_ids_device_id, uplink_message_f_cnt]`.
+  - Aggregated has 0 duplicates on `[time, device_id, f_count]`.
+
+4. **Ordering**
+  - Both files cover the same overall period.
+  - Aggregated file is not globally monotonic by time, so explicit sort is required before training splits.
+
+### Data quality findings
+
+1. **Pressure scale issue (both files)**
+  - Stored pressure values are mostly around ~299 to ~342 (not realistic hPa).
+  - Corrected pressure is: `pressure_hPa = pressure * 3.125`.
+  - After scaling, 99.998% of aggregated rows are in 800 to 1200 hPa.
+
+2. **Deterministic anomalous rows in aggregated file**
+  - Total anomalous rows: 33
+  - Pattern A (19 rows): `co2=21547`, `humidity=156.65`, `temperature=174.90`, `pressure=3.21`, `pm25=33.93`
+  - Pattern B (2 rows): `co2=16724`, `humidity=210.53`, `temperature=110.76`, `pressure=317.45`, `pm25=125.57`
+  - Pattern C (12 rows): `co2=0`, `humidity=0`, `temperature=0`, `pressure=508.90`, `pm25=0`
+  - Recommendation: drop all 33 rows (do not impute).
+
+3. **Missing values**
+  - Aggregated: `snr` missing in 1,427 rows, `f_count` missing in 19 rows.
+  - Raw unsorted: `snr` missing in 2,044 rows, `uplink_message_f_cnt` missing in 20 rows.
+  - Time parse failures: 0 (aggregated), 2 (unsorted).
+
+### Time coverage
+
+- Start: `2024-09-26 11:00:52.541686+00:00`
+- End: `2025-05-22 14:56:11.322763+00:00`
+
+### Mandatory preprocessing rules for model training
+
+1. Use `2.aggregated_measurements_data.csv` as the primary training source.
+2. Drop the 33 known bad rows by exact signature checks.
+3. Apply pressure correction: `pressure = pressure * 3.125`.
+4. Keep only rows with non-null `snr` and `f_count` for supervised link-quality labels.
+5. Sort by `time` before train/validation/test splitting.
+6. Log row counts before/after each cleaning step for reproducibility.
+
+### Recommended usage split
+
+- Use `2.aggregated_measurements_data.csv` for training/inference pipeline input.
+- Keep `1.unsorted_combined_measurements_data.csv` for auditability, trace-back, and reconstruction checks.
+
+---
+
 ## 📄 License
 
 MIT License - See LICENSE file
