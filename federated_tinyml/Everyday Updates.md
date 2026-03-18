@@ -94,6 +94,41 @@ Documentation updates completed
 - Added corresponding summary to root `README.md`.
 - Added daily log framework in `Everyday Updates.md` for ongoing tracking.
 
+New addition today: runtime flowchart for FederatedTinyML
+- Added an end-to-end flowchart to document how `train_model.py`, `FederatedTinyML.ino`, TTN, and `fl_server.py` interact in production.
+
+```mermaid
+flowchart TD
+  A[Aggregated Dataset CSV] --> B[train_model.py preprocessing]
+  B --> C[Pressure correction x3.125]
+  C --> D[Drop anomalies and null rows]
+  D --> E[Train model and export model.h]
+  E --> F[Flash model.h to MKR WAN nodes]
+
+  F --> G[Sensor read: pressure, CO2, temp, humidity, PM2.5]
+  G --> H[Normalize features]
+  H --> I[TinyML inference on-device]
+  I --> J[Predict link state]
+  J --> K[Event-driven uplink decision]
+
+  K --> L[TTN uplink]
+  L --> M[fl_server.py /uplink webhook]
+  M --> N[Store client update and metrics]
+  N --> O{Enough clients for round?}
+  O -- No --> P[Wait for more updates]
+  O -- Yes --> Q[FedAvg aggregation]
+  Q --> R[Build compressed global model]
+  R --> S[Schedule downlink via TTN]
+  S --> T[Node receives global model]
+  T --> U[Update local model]
+  U --> G
+
+  J --> V[Proxy label from RSSI/SNR/PDR]
+  V --> W[Local buffer update]
+  W --> X[Local training epochs]
+  X --> N
+```
+
 Repository and sync work completed
 - First push attempt failed because CSV files exceeded GitHub 100 MB limit.
 - Switched dataset upload method to Git LFS.
