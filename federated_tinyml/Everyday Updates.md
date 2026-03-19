@@ -10,6 +10,38 @@ How to update this file each day
 - Record technical work done, repository actions, and blockers.
 - Keep entries short, factual, and traceable.
 
+## 2026-03-19
+
+What we did today (simple summary)
+- Installed all required Python packages from `requirements.txt`.
+- Ran full training using real data from `2.aggregated_measurements_data.csv`.
+- Training finished successfully (50/50 epochs).
+- Test accuracy from this run: 83.62%.
+
+Model files generated
+- `model_output/model.keras`
+- `model_output/model.tflite`
+- `model_output/model.h`
+
+Arduino file update
+- Automatically copied `model_output/model.h` to `model.h` in the sketch folder.
+- This keeps the Arduino sketch location ready for flashing.
+
+Quick sanity inference check (real samples)
+- Loaded real data with the same preprocessing used in training.
+- Ran prediction checks on a few real rows.
+- Good-class rows were predicted correctly in sampled checks.
+- We also tested degraded/poor examples and saw mixed behavior:
+  - Some degraded rows were predicted correctly.
+  - Some degraded/poor rows were predicted as good.
+- Conclusion: pipeline works end-to-end, but class separation for degraded/poor can still be improved.
+
+Repository action today
+- Prepared a clean commit with:
+  - generated model artifacts
+  - copied `model.h`
+  - this daily update entry
+
 ## 2026-03-18
 
 Detailed two-CSV discussion record
