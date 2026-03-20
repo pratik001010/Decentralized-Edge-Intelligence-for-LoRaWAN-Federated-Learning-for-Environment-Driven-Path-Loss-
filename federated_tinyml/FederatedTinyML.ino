@@ -131,9 +131,9 @@ float pdr = 1.0;  // Packet Delivery Ratio
 // NORMALIZATION PARAMETERS (from training dataset)
 // ============================================================================
 
-// These should be updated based on your actual dataset statistics
-const float featureMeans[NUM_FEATURES] = {1013.0, 800.0, 22.0, 50.0, 15.0};
-const float featureStds[NUM_FEATURES] = {10.0, 400.0, 5.0, 20.0, 10.0};
+// Synced with the latest train_model.py export output.
+const float featureMeans[NUM_FEATURES] = {1009.2605, 542.0334, 21.9533, 36.1344, 1.8987};
+const float featureStds[NUM_FEATURES] = {30.9770, 132.9057, 2.9012, 6.6737, 2.3336};
 
 // ============================================================================
 // FUNCTION DECLARATIONS

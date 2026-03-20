@@ -10,6 +10,14 @@ How to update this file each day
 - Record technical work done, repository actions, and blockers.
 - Keep entries short, factual, and traceable.
 
+## 2026-03-20
+
+Tiny normalization sync note
+- Synced TinyML normalization values in `FederatedTinyML.ino` with the latest training export.
+- Updated `featureMeans` and `featureStds` to match the values printed by `train_model.py` after training.
+- Why this was done: on-device preprocessing now matches model training preprocessing.
+- Expected impact: inference on MKR WAN 1310 is more consistent and reliable.
+
 ## 2026-03-19
 
 What we did today (simple summary)
