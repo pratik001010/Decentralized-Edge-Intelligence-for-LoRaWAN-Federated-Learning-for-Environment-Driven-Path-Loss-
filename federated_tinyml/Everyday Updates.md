@@ -10,6 +10,50 @@ How to update this file each day
 - Record technical work done, repository actions, and blockers.
 - Keep entries short, factual, and traceable.
 
+## 2026-03-21
+
+System integration review (all files linked to the main program)
+
+Main runtime file
+- `FederatedTinyML.ino` is the device-side main program.
+- It initializes sensors, TinyML inference, LoRaWAN join, event-driven uplink, and simplified federated learning steps.
+- It uses `model.h` for on-device inference with TensorFlow Lite Micro.
+
+Model training and export flow
+- `train_model.py` is the training pipeline on PC.
+- It loads `2.aggregated_measurements_data.csv` by default (`REAL_DATA_PATH`).
+- It applies preprocessing: deterministic anomaly removal, pressure scale correction, null filtering for `snr` and `f_count`, time parsing/sorting, numeric coercion.
+- It trains a compact classifier and exports:
+  - `model_output/model.keras`
+  - `model_output/model.tflite`
+  - `model_output/model.h`
+  - `model_output/feature_means.npy`
+  - `model_output/feature_stds.npy`
+- It prints normalization values that must match values used in `FederatedTinyML.ino`.
+
+Server-side federated orchestration
+- `fl_server.py` receives uplink model updates, aggregates with FedAvg, and prepares global model downlink payloads.
+- Endpoints:
+  - `/uplink` for incoming TTN payloads
+  - `/downlink/<device_id>` for global model payload
+  - `/status` and `/health` for monitoring
+- Current status: TTN downlink scheduling endpoint is still placeholder integration logic.
+
+Dependencies and required stack
+- `requirements.txt` provides Python packages for training and server (`tensorflow`, `numpy`, `pandas`, `scikit-learn`, `flask`, etc.).
+- Arduino libraries and workflow are documented in `README.md`.
+
+How files work together (simple)
+- Dataset CSV -> `train_model.py` -> exported model files.
+- Exported `model.h` -> included by `FederatedTinyML.ino` for inference.
+- Device generates FL updates -> `fl_server.py` aggregates -> server prepares global model payload for downlink.
+
+New task pushed for today
+- Task 1: Run full compile memory check for MKR WAN 1310 and record Flash/SRAM usage.
+- Task 2: Validate one complete hardware smoke test cycle (sensor read -> inference -> uplink -> optional downlink).
+- Task 3: Replace placeholder LoRaWAN credentials in `FederatedTinyML.ino` with TTN production credentials.
+- Task 4: Finalize TTN downlink API integration in `fl_server.py` (replace placeholder section).
+
 ## 2026-03-20
 
 Tiny normalization sync note
