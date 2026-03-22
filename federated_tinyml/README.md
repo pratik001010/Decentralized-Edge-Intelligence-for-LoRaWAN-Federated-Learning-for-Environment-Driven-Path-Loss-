@@ -154,6 +154,41 @@ In TTN Console:
 
 ---
 
+## 🎯 Relevance Thresholds For Federated Push (From Previous Dataset)
+
+These thresholds are derived from `2.aggregated_measurements_data.csv` and used to decide when an update is informative enough for federated upload.
+
+### Key observed distributions
+
+- `exp_pl` (expected path loss) range: **45.26 to 145.26 dB**, median: **90.26 dB**
+- Derived class behavior from previous project data:
+  - Good links: `exp_pl` center around ~85 dB
+  - Degraded links: `exp_pl` center around ~119 dB
+  - Poor links: `exp_pl` center around ~136 dB
+
+### Recommended operating thresholds
+
+1. **Degraded/attention threshold:** `exp_pl >= 117 dB`
+  - Above this level, rows are mostly degraded/poor and are useful for adaptation.
+2. **Poor/critical threshold:** `exp_pl >= 133 dB`
+  - Above this level, rows are effectively poor-link examples.
+3. **Signal fallback threshold (if path loss is unavailable on node):**
+  - Degraded if `rssi <= -115 dBm` or `snr <= -5 dB`
+  - Poor if `rssi <= -120 dBm` or `snr <= -10 dB`
+
+### Practical federated push rule
+
+Push model updates when **any** of the following is true:
+
+- Predicted link state is degraded or poor.
+- Estimated/expected path loss crosses `117 dB`.
+- Critical path loss (`>=133 dB`) is observed.
+- Link metrics deteriorate (`rssi`/`snr` fallback thresholds).
+
+This keeps federated traffic focused on hard-link conditions and reduces low-value pushes from already stable links.
+
+---
+
 ## 📡 LoRaWAN Payload Formats
 
 ### Uplink: Model Update (Type 0x01)

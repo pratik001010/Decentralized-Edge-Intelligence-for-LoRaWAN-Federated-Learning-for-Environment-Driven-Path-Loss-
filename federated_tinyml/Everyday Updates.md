@@ -10,6 +10,33 @@ How to update this file each day
 - Record technical work done, repository actions, and blockers.
 - Keep entries short, factual, and traceable.
 
+## 2026-03-22
+
+Threshold analysis for federated push relevance (based on previous project data)
+
+What we analyzed
+- Analyzed `2.aggregated_measurements_data.csv` to derive practical thresholds for when data is relevant for federated updates.
+- Focused on `exp_pl` (path loss dB), `rssi`, and `snr`.
+
+What we found
+- `exp_pl` overall range: 45.26 to 145.26 dB (median 90.26 dB).
+- Derived link behavior from historical data:
+  - Good links centered near ~85 dB path loss.
+  - Degraded links centered near ~119 dB path loss.
+  - Poor links centered near ~136 dB path loss.
+
+Thresholds pushed to repository docs
+- Degraded/attention threshold: `exp_pl >= 117 dB`.
+- Poor/critical threshold: `exp_pl >= 133 dB`.
+- Signal fallback thresholds if path loss is unavailable on node:
+  - Degraded condition around `rssi <= -115 dBm` or `snr <= -5 dB`.
+  - Poor condition around `rssi <= -120 dBm` or `snr <= -10 dB`.
+
+Why this helps FL
+- We now push updates mainly when link quality is difficult or changing.
+- This reduces low-value pushes from stable good-link periods.
+- It makes the federated round data more informative for adaptation.
+
 ## 2026-03-21
 
 System integration review (all files linked to the main program)
