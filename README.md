@@ -1,6 +1,6 @@
 # Federated TinyML for LoRaWAN Edge Intelligence
 
-## Master's Thesis Project
+##  Project
 **Author:** Pratik Khadka  
 **Date:** March 2026
 
