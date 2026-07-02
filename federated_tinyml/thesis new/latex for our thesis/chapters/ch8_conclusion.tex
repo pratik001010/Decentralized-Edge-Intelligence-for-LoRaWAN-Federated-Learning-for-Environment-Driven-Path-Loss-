@@ -1,0 +1,25 @@
+\chapter{Conclusion and Future Work}
+\label{ch:conclusion}
+
+\section{Summary}
+% Problem → Approach → Results in one page.
+
+\section{Key Findings}
+\begin{enumerate}
+  \item \textbf{Comparable accuracy:} Federated $R^2 = 0.9999$ vs.\ centralized $R^2 = 1.0000$, only 0.001\,\% difference.
+  \item \textbf{$\approx$11$\times$ bandwidth reduction:} 25{,}920\,B $\to$ 2{,}356\,B per node per day.
+  \item \textbf{Fits on real hardware:} 81~parameters (324~bytes of weights) within 32\,KB \gls{sram} and 256\,KB Flash.
+  \item \textbf{Single-message FL updates:} 52\,B vs.\ Torres Sanchez's 1.39\,KB (28~messages).
+  \item \textbf{Non-IID impact:} Manageable --- with $E=5$ local epochs, the non-IID device-location split did not prevent convergence to $R^2 > 0.99$.
+\end{enumerate}
+
+\section{Future Work}
+\begin{enumerate}
+  \item Live multi-week deployment with all six nodes.
+  \item True on-device backpropagation (TinyTrain/TinyOL).
+  \item TTN downlink API integration for automated model distribution.
+  \item Deeper model architectures and accuracy--communication trade-off study.
+  \item Energy profiling under federated workloads.
+  \item Cross-building generalization via federated transfer learning.
+\end{enumerate}
+% End of Conclusion

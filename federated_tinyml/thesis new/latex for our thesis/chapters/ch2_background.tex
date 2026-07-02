@@ -1,0 +1,121 @@
+\chapter{Background and Theoretical Foundations}
+\label{ch:background}
+
+\section{LoRaWAN Technology}
+\label{sec:lorawan-tech}
+
+\subsection{LoRa Physical Layer}
+% CSS modulation, SF7–SF12, EU868 (863–870 MHz), bandwidth 125/250 kHz
+
+\subsection{LoRaWAN Protocol Architecture}
+% End device → gateway → network server → application server
+% Class A (our devices): uplink-initiated, two Rx windows after each uplink
+% OTAA vs ABP — we use OTAA
+
+\subsection{Duty Cycle and Payload Constraints}
+% EU868: 1% duty cycle per sub-band
+% Payload by DR: DR0/SF12 = 51 bytes (our worst-case constraint)
+% This shaped our 52-byte FL payload design: 4 header + 48 weight deltas
+\begin{table}[H]
+  \centering
+  \begin{tabular}{cccc}
+    \toprule
+    \textbf{DR} & \textbf{SF} & \textbf{Max Payload (B)} & \textbf{Approx.\ Airtime (51\,B)} \\
+    \midrule
+    0 & 12 & 51  & $\approx$2.5\,s \\
+    1 & 11 & 51  & $\approx$1.3\,s \\
+    2 & 10 & 51  & $\approx$0.6\,s \\
+    3 & 9  & 115 & $\approx$0.3\,s \\
+    4 & 8  & 222 & $\approx$0.2\,s \\
+    5 & 7  & 222 & $\approx$0.1\,s \\
+    \bottomrule
+  \end{tabular}
+  \caption{LoRaWAN EU868 maximum payload size by data rate.}
+  \label{tab:lorawan-payload}
+\end{table}
+
+\subsection{The Things Network}
+% TTN v3 infrastructure used in both prior and current project
+% Webhook integration: TTN → POST /uplink → fl_server.py
+% Downlink limit: ~10 confirmed downlinks/day/device
+
+\section{Indoor Radio Propagation and Path Loss}
+\label{sec:path-loss-theory}
+
+\subsection{Free-Space and Log-Distance Path Loss Models}
+% Friis: PL_fs = 20·log10(d) + 20·log10(f) + 20·log10(4π/c)
+% Log-distance: PL(d) = PL(d_0) + 10·n·log10(d/d_0) + X_σ
+% n ≈ 2.0–3.5 for indoor office environments
+
+\subsection{Expected Path Loss}
+% exp_pl = TX_power − RSSI + antenna_corrections
+% This is the target variable for our regression model
+
+\subsection{Environmental Factors Affecting Indoor Propagation}
+% Prior project finding: humidity, CO2, PM2.5, temperature, pressure
+% all correlate with path loss
+% Physical mechanisms: water absorption, occupancy effects, refraction
+
+\section{Machine Learning for Path Loss Prediction}
+\label{sec:ml-pathloss}
+
+\subsection{Traditional Centralized Approaches}
+% MLR, Random Forest, XGBoost — prior project achieved R² ≈ 0.93 with XGBoost
+
+\subsection{Neural Network Approaches}
+% Dense NNs for regression; knowledge distillation for edge deployment
+% Motivation for Dense(8→8→1): smallest model capturing env+radio→PL relationship
+
+\section{Federated Learning}
+\label{sec:fl-theory}
+
+\subsection{Fundamentals}
+% McMahan et al. (2017): train locally, aggregate globally, no raw data sharing
+
+\subsection{Federated Averaging Algorithm}
+\begin{algorithm}[H]
+  \caption{\gls{fedavg}~\cite{mcmahan2017communication}}
+  \label{alg:fedavg}
+  \KwIn{$K$ clients, model $w_0$, $T$ rounds, $E$ local epochs, lr $\eta$}
+  \KwOut{Global model $w_T$}
+  \For{round $t = 1 \ldots T$}{
+    Server selects subset $S_t \subseteq \{1,\ldots,K\}$\;
+    Server broadcasts $w_t$ to $S_t$\;
+    \For{client $k \in S_t$ \textbf{in parallel}}{
+      $w_k \leftarrow w_t$\;
+      \For{epoch $e = 1 \ldots E$}{
+        \For{batch $\mathcal{B} \subset \mathcal{D}_k$}{
+          $w_k \leftarrow w_k - \eta \nabla \ell(w_k;\mathcal{B})$\;
+        }
+      }
+      Send $w_k$ to server\;
+    }
+    $w_{t+1} \leftarrow \displaystyle\sum_{k \in S_t} \frac{n_k}{\sum_{j} n_j} w_k$\;
+  }
+\end{algorithm}
+
+\subsection{Non-IID Data Challenges}
+% Real deployments: each device sees different data; our case: ED0 (stairwell)
+% has different conditions than ED3 (kitchen); causes slower convergence
+
+\subsection{Communication Efficiency: Quantization and Compression}
+% float32 → int8 (scale factor 127); critical for 51-byte LoRaWAN limit
+
+\section{TinyML}
+\label{sec:tinyml-theory}
+
+\subsection{TensorFlow Lite Micro}
+% Static memory via tensor arena; AllOpsResolver; no OS needed
+
+\subsection{Model Quantization for Microcontrollers}
+% Post-training int8 quantization with representative dataset calibration
+
+\subsection{On-Device Training Challenges}
+% TFLite Micro has NO backpropagation support
+% Limited RAM prevents full gradient computation
+% Current approach: simplified weight update proxy
+
+
+% ══════════════════════════════════════════════════════════════════════════════
+% CHAPTER 3: RELATED WORK
+% ══════════════════════════════════════════════════════════════════════════════

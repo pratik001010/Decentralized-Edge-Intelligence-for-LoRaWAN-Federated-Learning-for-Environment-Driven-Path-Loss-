@@ -1,0 +1,279 @@
+\chapter{Methodology}
+\label{ch:methodology}
+\label{sec:methodology}
+
+\section{System Design and Architecture}
+\label{sec:system-design}
+
+\subsection{Design Principles}
+% 1. CONTINUITY: same hardware + sensors as prior project
+% 2. COMPATIBILITY: FL messages fit 51-byte LoRaWAN limit
+% 3. MINIMALITY: model + runtime fit in 32 KB SRAM
+% 4. PRIVACY: raw sensor data never leaves the device
+
+\subsection{System Overview}
+% Three-layer architecture:
+% Layer 1 (offline): train_model.py → model.h
+% Layer 2 (on-device): FederatedTinyML.ino — sense → infer → train → send
+% Layer 3 (server): fl_server.py — aggregate → redistribute
+% FIGURE: system architecture diagram
+
+\subsection{Hardware Platform}
+
+\subsubsection{Arduino MKR WAN 1310}
+% SAMD21 Cortex-M0+ @ 48 MHz, 32 KB SRAM, 256 KB Flash
+% Murata CMWX1ZZABZ LoRa module, EU868, Class A
+
+\subsubsection{Sensor Suite}
+\begin{table}[H]
+  \centering
+  \begin{tabular}{llll}
+    \toprule
+    \textbf{Sensor} & \textbf{Measurement} & \textbf{Range} & \textbf{Interface} \\
+    \midrule
+    BME280 & Pressure     & 300--1100\,hPa     & I\textsuperscript{2}C (0x77) \\
+    SCD4x  & CO\textsubscript{2} & 400--5000\,ppm & I\textsuperscript{2}C \\
+    SCD4x  & Temperature  & $-10$ to $+60\,^{\circ}$C & I\textsuperscript{2}C \\
+    SCD4x  & Humidity     & 0--100\,\%RH       & I\textsuperscript{2}C \\
+    SPS30  & PM2.5        & 0--1000\,$\mu$g/m\textsuperscript{3} & I\textsuperscript{2}C \\
+    \bottomrule
+  \end{tabular}
+  \caption{Sensor specifications (identical to prior project).}
+  \label{tab:sensors}
+\end{table}
+
+\subsubsection{Deployment Topology}
+% 6 nodes (ED0--ED5) across indoor office rooms; single gateway
+% FIGURE: floor plan with node locations
+
+\subsection{TinyML Model Architecture}
+
+\subsubsection{Architecture: Dense($8{\to}8{\to}1$)}
+% 8 inputs (5 env + rssi, snr, SF) -> 8 hidden (ReLU) -> 1 output (linear, predicts exp_pl in dB)
+% Total parameters: (8\times8+8) + (8\times1+1) = 81
+% Quantized model size: 2,704 bytes (model.tflite)
+
+\subsubsection{Feature Normalization}
+% StandardScaler: zero mean, unit variance
+% Exported from training, hardcoded on device:
+% featureMeans = {1009.2605, 542.0334, 21.9533, 36.1344, 1.8987}
+% featureStds  = {30.9770, 132.9057, 2.9012, 6.6737, 2.3336}
+
+\subsubsection{Path Loss $\to$ Link State Thresholds}
+% From exp\_pl distribution analysis of 1.7M rows:
+% $<$117\,dB $\to$ Good, 117--133\,dB $\to$ Degraded, $\geq$133\,dB $\to$ Poor
+
+\subsection{Federated Learning Protocol}
+
+\subsubsection{Round Structure}
+% 24-hour FL rounds; min 3/6 clients for aggregation
+
+\subsubsection{Payload Design}
+\begin{table}[H]
+  \centering
+  \begin{tabular}{llcp{5.5cm}}
+    \toprule
+    \textbf{Type} & \textbf{Code} & \textbf{Size} & \textbf{Content} \\
+    \midrule
+    Status report  & 0x00 & 8\,B  & link\_state, PDR, DR, packet\_count \\
+    Model update   & 0x01 & 52\,B & version, num\_weights, 48 int8 deltas \\
+    Global model   & 0x02 & 51\,B & version, num\_weights, 47 int8 weights \\
+    \bottomrule
+  \end{tabular}
+  \caption{LoRaWAN message types and payload structure.}
+  \label{tab:payloads}
+\end{table}
+% KEY: Torres Sanchez needed 7+ messages per round (1.39 KB model).
+% We need exactly 1 message (52 bytes). Our model is ~27× smaller.
+
+\subsubsection{Event-Driven Transmission}
+% Good: 5 min, Degraded: 2 min, Poor: 1 min
+% Immediate TX on POOR state transition
+
+\subsection{Server-Side Aggregation}
+
+\subsubsection{Flask API Architecture}
+% Flask endpoints: GET /health, GET /status, POST /uplink, GET /downlink/\texttt{<dev\_id>}
+% Thread-safe request handling; JSON responses
+
+\subsubsection{FedAvg Aggregation}
+% Weighted averaging: $w_{t+1} = \sum_k \frac{n_k}{N}\,w_k$
+% Requires $\geq$3/6 clients before aggregation triggers
+% Thread-safe lock prevents concurrent write conflicts
+
+\subsubsection{TTN Webhook Integration}
+% TTN POST /uplink $\to$ base64 decode $\to$ int8 dequantize $\to$ fedavg
+% Downlink: updated global weights re-encoded and sent via TTN API
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+% 4.2  IMPLEMENTATION
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Implementation}
+\label{sec:implementation}
+
+\subsection{Dataset: Foundation from the Prior Project}
+\label{sec:dataset}
+
+\subsubsection{Measurement Campaign}
+The dataset used in this thesis originates from the indoor \gls{lorawan} measurement campaign conducted by Obiri and Van~Laerhoven (2024) on the 8th floor of the H\"olderlinstra{\ss}e Campus, University of Siegen~\cite{obiri2024comprehensive}. The campaign ran from September~2024 to May~2025 and employed six Arduino MKR~WAN~1310 end devices (ED0--ED5), each equipped with:
+\begin{itemize}
+  \item Sensirion SCD4x (CO\textsubscript{2}, temperature, humidity),
+  \item Bosch BME280 (atmospheric pressure),
+  \item Sensirion SPS30 (particulate matter PM2.5).
+\end{itemize}
+Each device transmitted one \gls{lorawan} uplink per minute to a Kerlink iFemtoCell~gateway connected via \gls{ttn} and MQTT to an InfluxDB instance on AWS. The raw dataset comprises 2,313,903~rows across 81~columns (1.95\,GB). An aggregation step (performed in the prior PEP project) produced the working dataset used here: \textbf{1,715,869~rows} with 20~columns (298\,MB), stored as \texttt{2.aggregated\_measurements\_data.csv}.
+
+The aggregated dataset includes, for each transmission:
+\begin{itemize}
+  \item \textbf{Environmental observations:} \texttt{pressure}, \texttt{co2}, \texttt{temperature}, \texttt{humidity}, \texttt{pm25}.
+  \item \textbf{Radio-layer metadata} (recorded by \gls{ttn} at receive time): \texttt{rssi} (dBm), \texttt{snr} (dB), \texttt{SF} (spreading factor, 7--12).
+  \item \textbf{Derived quantities:} \texttt{exp\_pl} (expected path loss, dB) --- computed during the prior project as $\text{exp\_pl} = \text{TX\_power} - \text{RSSI} + \text{antenna\_gain\_corrections}$.
+  \item \textbf{Identifiers:} \texttt{device\_id} (ED0--ED5), \texttt{time} (UTC timestamp).
+\end{itemize}
+
+\subsubsection{Data Quality and Cleaning}
+Three deterministic corrupted row patterns were identified during a data quality audit and removed (33~rows total). The corruption patterns were characterized by physically impossible sensor readings (e.g., CO\textsubscript{2}~$=$~21{,}547\,ppm, humidity~$=$~156.65\,\%RH, or all-zero sensor values with non-zero pressure). Additionally, the stored pressure values required multiplication by a factor of 3.125 to convert to hPa, as confirmed by cross-referencing with the BME280 datasheet specification. Rows containing null values in the \texttt{snr} or \texttt{f\_count} columns were also dropped (1{,}446 rows). Finally, only rows where the target variable \texttt{exp\_pl} fell within the physically plausible range of 50--200\,dB were retained.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lr}
+    \toprule
+    \textbf{Stage} & \textbf{Rows} \\
+    \midrule
+    Raw TTN export                         & 2,313,903 \\
+    After aggregation                      & 1,715,869 \\
+    After anomaly removal ($-33$)          & 1,715,836 \\
+    After null removal ($-1{,}446$)        & 1,714,390 \\
+    After path loss range filter (50--200\,dB) & 1,714,379 \\
+    \textbf{Final usable}                  & \textbf{1,714,379} \\
+    \bottomrule
+  \end{tabular}
+  \caption{Data preprocessing: row counts at each stage.}
+  \label{tab:data-cleaning}
+\end{table}
+
+\subsubsection{Features and Target}
+The model uses eight input features and one regression target:
+\begin{itemize}
+  \item \textbf{Environmental (5):} pressure (hPa, from BME280), CO\textsubscript{2} (ppm, from SCD4x), temperature ($^{\circ}$C, from SCD4x), humidity (\%RH, from SCD4x), PM2.5 ($\mu$g/m$^3$, from SPS30).
+  \item \textbf{Radio (3):} \gls{rssi} (dBm), \gls{snr} (dB), \gls{sf} (unitless, 7--12). These are extracted from the LoRaWAN metadata recorded by the \gls{ttn} network server at receive time.
+  \item \textbf{Target:} \texttt{exp\_pl} --- expected path loss (dB), computed as $\text{TX\_power} - \text{RSSI} + \text{antenna corrections}$.
+\end{itemize}
+All features are standardized to zero mean and unit variance using \texttt{StandardScaler} prior to model training.
+
+\subsection{Model Training Pipeline}
+The centralized baseline model uses a Dense($8{\to}8{\to}1$) architecture (81~parameters), compiled with the Adam optimizer (learning rate~$=$~0.001) and MSE loss. Training was performed for up to 50~epochs with early stopping (patience~$=$~8, monitoring validation loss, restoring best weights) and a batch size of 2{,}048. The dataset was split 80/20 into training and test sets using a global random split (\texttt{random\_seed}~$=$~42). A 15\,\% validation split was further carved from the training set for early stopping monitoring.
+
+After training, the model is converted to TensorFlow Lite with full int8 quantization using a representative dataset of 500~samples, producing a \texttt{model.tflite} file of 2{,}704~bytes. This is then exported as a C byte array (\texttt{model.h}, 17{,}723~bytes) for inclusion in the Arduino firmware.
+
+\subsection{Federated Learning Simulation}
+\label{sec:fl-sim}
+
+The \gls{fl} simulation was conducted on a Windows~11 workstation (Intel Core i7, 16\,GB RAM) using a Conda environment with Python~3.13 and TensorFlow~2.21.0. The FL framework was implemented as a custom Python script (\texttt{fl\_simulation.py}, 908~lines) using TensorFlow/Keras for model training and NumPy for \gls{fedavg} aggregation. Unlike Torres Sanchez et al.\ who used the Flower framework~\cite{beutel2020flower}, we implemented \gls{fedavg} directly, as our model ($\approx$81~parameters) is small enough that a lightweight custom implementation suffices and avoids external dependencies.
+
+The simulation follows the same methodology established by Torres Sanchez et al., who stated: ``The \gls{fl} framework simulates distributed devices functioning as clients.'' Both approaches use real-world data partitioned across virtual clients, with centralized aggregation simulating the server role. The key difference is that our dataset is real measured data from a physical deployment, while their work used the TON\_IoT dataset.
+
+\subsubsection{Non-IID Data Partitioning}
+Unlike simulation-only studies, our \gls{fl} evaluation uses real-world measurement data collected during the prior deployment campaign. Six virtual \gls{fl} clients were initialized, each assigned the actual measurement data from its corresponding physical device (ED0--ED5). This produces a naturally non-\gls{iid} data distribution, as each device observed different environmental conditions based on its room placement (e.g., stairwell vs.\ kitchen). This is more representative than random or synthetic data splitting commonly used in \gls{fl} simulations.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Client} & \textbf{Device} & \textbf{Location} & \textbf{Samples} \\
+    \midrule
+    1 & ED0 & Location~A & 228,627 \\
+    2 & ED1 & Location~B & 226,727 \\
+    3 & ED2 & Location~C & 229,404 \\
+    4 & ED3 & Location~D & 226,237 \\
+    5 & ED4 & Location~E & 225,399 \\
+    6 & ED5 & Location~F & 235,109 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Per-client data distribution (non-IID by device location).}
+  \label{tab:client-data}
+\end{table}
+
+\noindent
+Figure~\ref{fig:data-dist} visualizes the non-IID nature of this partitioning: each client's path loss distribution exhibits a distinct mean and spread, reflecting its unique room environment.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig1_data_distribution_per_client.png}
+  \caption{Distribution of expected path loss (\texttt{exp\_pl}) for each virtual FL client. Each histogram corresponds to one physical device location. The dashed line marks the per-client mean. The variation in distribution shape and mean across clients confirms the naturally non-IID partitioning.}
+  \label{fig:data-dist}
+\end{figure}
+
+\subsubsection{FL Training Protocol}
+Each virtual client trains a local regression model (Dense($8\!\to\!8\!\to\!1$), $\approx$81~parameters) on its local data partition for $E$~local epochs per round. After local training, weight updates are aggregated at the virtual server using \gls{fedavg}. The process repeats for $N$~communication rounds. The global model is evaluated on a held-out test set after each round.
+
+\subsubsection{Baseline Comparison}
+A centralized model with identical architecture was trained on the full combined dataset to establish an upper-bound $R^2$ baseline, directly comparable to the prior project's XGBoost result ($R^2 \approx 0.93$).
+
+\subsubsection{Hardware Prototype Validation}
+To demonstrate deployment feasibility, the trained \gls{tflite} Micro model was compiled and flashed to a real Arduino MKR~WAN~1310 (SAMD21 Cortex-M0+, 32\,KB~SRAM, 256\,KB~Flash). Inference latency, memory footprint, and \gls{lorawan} payload compatibility were measured on the physical device.
+
+\subsection{Edge Device Firmware}
+\label{sec:edge-firmware}
+The Arduino MKR~WAN~1310 firmware (\texttt{FederatedTinyML.ino}, 772~lines of~C++) integrates the following components:
+
+\subsubsection{Sensor Pipeline and Feature Extraction}
+On each measurement cycle, the device reads five environmental values from the SCD4x, BME280, and SPS30 sensors. It simultaneously reads three radio parameters from the Murata LoRa modem: \texttt{modem.getRSSI()} (dBm), \texttt{modem.getSNR()} (dB), and the current data rate (mapped to spreading factor SF~7--12). These eight raw values are assembled into a float array of \texttt{NUM\_FEATURES~=~8}.
+
+\subsubsection{Feature Normalization}
+All eight features are standardized using pre-computed mean and standard deviation values (derived from the training dataset's \texttt{StandardScaler} output) hardcoded into the firmware:
+\[
+  x_i^{\text{norm}} = \frac{x_i - \mu_i}{\sigma_i}, \quad i \in \{1, \ldots, 8\}
+\]
+
+\subsubsection{TFLite Micro Inference}
+The normalized feature vector is fed into the TFLite Micro interpreter, which executes the Dense($8{\to}8{\to}1$) model stored in \texttt{model.h} (2,704~bytes compiled from \texttt{model.tflite}). The model predicts the expected path loss (\texttt{exp\_pl}) in dB.
+
+\subsubsection{Link State Classification via Thresholds}
+\label{sec:thresholds}
+The predicted path loss is converted to a three-class link state label using thresholds derived from the \textbf{on-device Packet Delivery Ratio (PDR)} as a proxy signal. The PDR is computed as the ratio of acknowledged transmissions to total transmissions over a sliding window. The classification thresholds are:
+\begin{itemize}
+  \item \textbf{Good} (label~0): \texttt{PDR} $\geq 0.9$ --- reliable transmission with $>$90\,\% packet success.
+  \item \textbf{Degraded} (label~1): $0.7 \leq$ \texttt{PDR} $< 0.9$ --- marginal link quality, increased retransmissions expected.
+  \item \textbf{Poor} (label~2): \texttt{PDR} $< 0.7$ --- unreliable link, adaptive action required.
+\end{itemize}
+
+\noindent
+These PDR thresholds (0.9 and 0.7) were selected based on the LoRaWAN link budget analysis from the supervisor's paper, which established that packets received with path loss above approximately 133\,dB (at SF12) exhibit significantly reduced delivery rates. The 0.9 and 0.7 breakpoints correspond to the transition zones observed in the measurement data where delivery reliability degrades as environmental conditions change.
+
+For the \textbf{simulation training pipeline} (\texttt{train\_model.py}), where PDR is not directly available, the link state labels are derived from the radio metadata using equivalent RSSI/SNR thresholds:
+\begin{itemize}
+  \item \textbf{Good}: RSSI $> -100$\,dBm \textit{and} SNR $> 0$\,dB.
+  \item \textbf{Degraded}: RSSI $> -115$\,dBm \textit{and} SNR $> -5$\,dB (and not Good).
+  \item \textbf{Poor}: all remaining samples.
+\end{itemize}
+
+\noindent
+These RSSI/SNR boundaries were determined by cross-referencing the supervisor's published path loss measurements with the Semtech SX1276 receiver sensitivity specifications: the SX1276 sensitivity at SF12/BW125 is $-137$\,dBm, meaning signals weaker than $-115$\,dBm with SNR below $-5$\,dB approach the demodulation floor.
+
+\subsubsection{Circular Buffer and Local Training}
+The device maintains a circular buffer of 32~samples (each containing the 8-feature vector and its proxy label). When a FL round is triggered, the device performs simplified local training: it computes weight deltas by comparing inference errors across the buffer and adjusts the model weights proportionally. These weight deltas are quantized to 8-bit integers and packed into a 52-byte \gls{lorawan} uplink payload.
+
+\subsubsection{Adaptive Transmission Scheduling}
+The predicted link state directly controls the device's transmission interval:
+\begin{itemize}
+  \item \textbf{Good}: transmit every 5~minutes (standard duty cycle).
+  \item \textbf{Degraded}: transmit every 1~minute (increased monitoring).
+  \item \textbf{Poor}: transmit every 30~seconds (urgent reporting) and trigger an anomaly flag.
+\end{itemize}
+
+\subsection{FL Server}
+\label{sec:fl-server}
+The FL server is implemented as a Flask web application (\texttt{fl\_server.py}) that receives \gls{lorawan} uplinks via TTN webhooks. Key components:
+\begin{itemize}
+  \item \textbf{FederatedLearningServer class:} Thread-safe \gls{fedavg} aggregation with configurable minimum client participation.
+  \item \textbf{Weight decoding:} Incoming 52-byte payloads are dequantized from 8-bit integers back to float32 weight deltas.
+  \item \textbf{Global model update:} After $\geq$3 clients submit updates in a round, the server performs weighted averaging ($w_{t+1} = \sum_k \frac{n_k}{N} w_k$) and generates a new global model payload.
+  \item \textbf{Downlink distribution:} The updated global weights are sent back to devices via \gls{ttn} downlink API.
+\end{itemize}
+
+
+% ══════════════════════════════════════════════════════════════════════════════
+% CHAPTER 5: RESULTS AND DISCUSSION
+% ══════════════════════════════════════════════════════════════════════════════

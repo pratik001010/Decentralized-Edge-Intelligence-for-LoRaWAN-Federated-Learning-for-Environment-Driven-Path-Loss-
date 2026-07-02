@@ -1,0 +1,116 @@
+\chapter{Related Work}
+\label{ch:related-work}
+
+%% ── 3.1 ─────────────────────────────────────────────────────────────────────
+\section{Federated Learning for IoT}
+\label{sec:fl-iot}
+
+% Survey of FL on resource-constrained IoT devices
+% Ramadan et al. (2025): FL + TinyML challenges and opportunities
+% Key challenges: communication overhead, device heterogeneity, data heterogeneity
+% Adaptive FL: clustering, personalization, asynchronous aggregation
+
+%% ── 3.2 ─────────────────────────────────────────────────────────────────────
+\section{Federated Learning over LoRaWAN: Torres Sanchez et al.}
+\label{sec:torres-sanchez}
+
+% DETAILED REVIEW — this is our primary reference for FL methodology
+
+Torres Sanchez et al.~\cite{torressanchez2024federated} presented the first comprehensive
+study of \gls{fl} within \gls{lorawan}-constrained communication. Their framework
+targets anomaly detection for industrial machinery using an optimized autoencoder. The key
+aspects of their work are summarized in Table~\ref{tab:torres-comparison}.
+
+\subsection{Experimental Setup}
+% - 4 IIoT prototypes monitoring construction machinery (Manitou, Atlas Copco, etc.)
+% - Private LoRaWAN → TTN → MQTT → data management agent
+% - 77,798 total messages; features: battery voltage, fuel, RPM, oil temp/pressure
+% - FL framework: Flower (Python), 4 virtual clients, 1 central server
+% - Model: compact autoencoder, 1 hidden layer (32 neurons), Tanh, Adam, MSE loss
+
+\subsection{Key Results}
+% - FL Accuracy: 92.30%, F1: 94.77%, TNR: 90.65%, TPR: 92.93%
+% - Comparable to centralized OC-SVM (92.06%) and centralized AE (93.13%)
+% - Best round/epoch config: 20 epochs × 4 rounds → F1 = 95.23%
+% - Optimized AE: 1.39 KB per FL round; 128 neurons: 5.52 KB; 3 layers: 44 KB
+
+\subsection{Communication Analysis}
+% Message count formula: Nm = ceil(Msize / MaxPayload) × Rd
+% SF7/8: 222 bytes, SF9/10: 115 bytes, SF11/12: 51 bytes
+% For 1.39 KB model: 7 messages (best) to 2233 messages (worst)
+% Training airtime: 52.8 minutes optimal
+% KEY INSIGHT: model size must be minimized for LoRaWAN viability
+
+\subsection{Simulation Methodology}
+% Their exact quote (use as reference for our own methodology):
+% "The FL framework in this experiment simulates distributed devices functioning
+%  as clients orchestrated by the Flower framework..."
+% Environment: i7-1165G7, 16GB RAM, WSL + Conda
+% Virtual clients: "Virtual client initialization and orchestration..."
+% This confirms simulation with virtual clients is standard and accepted
+
+%% ── 3.3 ─────────────────────────────────────────────────────────────────────
+\section{ML-Based Path Loss Prediction}
+\label{sec:ml-pathloss-related}
+
+% Survey of ML for path loss modeling
+% Indoor vs outdoor, different frequency bands
+% Common models: ANN, Random Forest, CNN for spatial data
+% Environment-driven approaches: using weather/occupancy data
+% Gap: no federated approach exists for path loss prediction
+
+%% ── 3.4 ─────────────────────────────────────────────────────────────────────
+\section{Research Gap and Positioning}
+\label{sec:research-gap}
+
+% CLEAR STATEMENT: No prior work combines FL + TinyML + path loss regression
+% on constrained LoRaWAN devices.
+
+\begin{table}[H]
+  \centering
+  \caption{Positioning of this thesis relative to Torres Sanchez et al.\ and the prior project.}
+  \label{tab:torres-comparison}
+  \begin{tabular}{p{3.8cm} p{3.8cm} p{3.8cm}}
+    \toprule
+    \textbf{Aspect} &
+    \textbf{Torres Sanchez et al.} &
+    \textbf{This Thesis} \\
+    \midrule
+    Application domain &
+      Anomaly detection (machinery) &
+      Path loss regression (indoor LoRaWAN) \\[4pt]
+    ML task &
+      Classification / reconstruction &
+      Regression ($R^2$, RMSE) \\[4pt]
+    Model &
+      Autoencoder (32 neurons) &
+      Dense NN (5$\to$8$\to$1, 57 params) \\[4pt]
+    FL framework &
+      Flower (Python) &
+      Custom FedAvg (TensorFlow/Keras) \\[4pt]
+    Clients &
+      4 virtual clients &
+      6 virtual clients (one per real device) \\[4pt]
+    Data source &
+      77,798 machinery messages &
+      1,715,869 real LoRaWAN measurements \\[4pt]
+    Data distribution &
+      Non-IID (per machine type) &
+      Non-IID (per physical room location) \\[4pt]
+    Hardware prototype &
+      LoRaWAN prototype mentioned &
+      TFLite Micro on real MKR WAN 1310 \\[4pt]
+    Prior centralized baseline &
+      OC-SVM, IF, AE (centralized) &
+      XGBoost $R^2 \approx 0.93$ (prior project) \\[4pt]
+    Key metric &
+      F1 = 94.77\%, Acc = 92.30\% &
+      $R^2$ = [XX], RMSE = [XX]\,dB \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% CONCLUDE: "Torres Sanchez et al. proved FL is feasible over LoRaWAN.
+%  Our prior project proved environment drives path loss.
+%  This thesis bridges both: federated path loss regression on real edge hardware
+%  using real measurement data."

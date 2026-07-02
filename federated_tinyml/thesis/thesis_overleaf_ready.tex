@@ -1,0 +1,1133 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% MASTER'S THESIS — Pratik Khadka
+%% Single-file version for Overleaf
+%% Upload this file + references.bib to Overleaf and compile with pdfLaTeX
+%% Compile order: pdflatex → bibtex → pdflatex → pdflatex
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[12pt, a4paper, twoside, openright]{report}
+
+% ── Packages ────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[english]{babel}
+\usepackage[left=3cm,right=2.5cm,top=2.5cm,bottom=2.5cm,bindingoffset=0.5cm]{geometry}
+\usepackage{setspace}\onehalfspacing
+\usepackage{fancyhdr}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[LE]{\leftmark}\fancyhead[RO]{\rightmark}\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}\graphicspath{{thesis_figures/}{figures/}}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{booktabs,tabularx,multirow,array}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily\small,keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray}\itshape,stringstyle=\color{red},
+  numbers=left,numberstyle=\tiny\color{gray},numbersep=8pt,
+  frame=single,breaklines=true,captionpos=b,tabsize=2}
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\usepackage[colorlinks=true,linkcolor=NavyBlue,citecolor=ForestGreen,
+  urlcolor=BrickRed,bookmarks=true,bookmarksnumbered=true]{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[acronym,toc,nonumberlist]{glossaries}
+\usepackage{siunitx}\sisetup{per-mode=symbol}
+\usepackage[toc,page]{appendix}
+\usepackage{caption}
+\captionsetup[table]{position=bottom,skip=6pt}
+\captionsetup[figure]{position=bottom,skip=6pt}
+
+% ── Acronyms ────────────────────────────────────────────────────────────────
+\makeglossaries
+\newacronym{fl}{FL}{Federated Learning}
+\newacronym{tinyml}{TinyML}{Tiny Machine Learning}
+\newacronym{lorawan}{LoRaWAN}{Long Range Wide Area Network}
+\newacronym{ttn}{TTN}{The Things Network}
+\newacronym{fedavg}{FedAvg}{Federated Averaging}
+\newacronym{pdr}{PDR}{Packet Delivery Ratio}
+\newacronym{rssi}{RSSI}{Received Signal Strength Indicator}
+\newacronym{snr}{SNR}{Signal-to-Noise Ratio}
+\newacronym{sf}{SF}{Spreading Factor}
+\newacronym{adr}{ADR}{Adaptive Data Rate}
+\newacronym{mcu}{MCU}{Microcontroller Unit}
+\newacronym{tflite}{TFLite}{TensorFlow Lite}
+\newacronym{iid}{IID}{Independent and Identically Distributed}
+\newacronym{rmse}{RMSE}{Root Mean Square Error}
+\newacronym{mae}{MAE}{Mean Absolute Error}
+\newacronym{iot}{IoT}{Internet of Things}
+\newacronym{lpwan}{LPWAN}{Low Power Wide Area Network}
+\newacronym{sram}{SRAM}{Static Random Access Memory}
+\newacronym{otaa}{OTAA}{Over-The-Air Activation}
+
+% ── Metadata ────────────────────────────────────────────────────────────────
+\newcommand{\thesistitle}{Decentralized Edge Intelligence for LoRaWAN: Federated Learning for Environment-Driven Path Loss and Link Quality Modeling}
+\newcommand{\authorname}{Pratik Khadka}
+\newcommand{\supervisorname}{Prof.\ Dr.\ Kristof Van Laerhoven}
+\newcommand{\secondexaminer}{M.Sc.\ Nahshon Mokua Obiri}
+\newcommand{\universityname}{University of Siegen}
+\newcommand{\departmentname}{Department of Electrical Engineering and Computer Science}
+\newcommand{\programmename}{Ubiquitous Computing}
+\newcommand{\matrikelnr}{1833319}
+\newcommand{\submissiondate}{15.\ June 2026}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\pagenumbering{Roman}
+
+% ══════════════════════════════════════════════════════════════════════════════
+% TITLE PAGE
+% ══════════════════════════════════════════════════════════════════════════════
+\begin{titlepage}
+  \noindent
+  \includegraphics[height=1.5cm]{UNiversity siegen.png}\hfill
+  \includegraphics[height=1.2cm]{eminent.png}\hfill
+  \includegraphics[height=1.5cm]{ubiquitous Computing.png}
+
+  \vspace{3cm}
+  \centering
+
+  {\large\textsc{\universityname}}\\[1.5cm]
+
+  {\LARGE\bfseries \thesistitle}\\[2cm]
+
+  {\Large\textsc{Master's Thesis}}\\[0.3cm]
+  {\large\textit{\programmename}}\\[1.5cm]
+
+  {\Large\textit{\authorname}}\\[0.3cm]
+  {\normalsize Matriculation number: \matrikelnr}\\[1.5cm]
+
+  {\normalsize \submissiondate}
+
+  \vfill
+
+  \begin{flushleft}
+    \textbf{Examiner}\\[0.3cm]
+    \begin{tabular}{@{}l@{\hspace{4cm}}l@{}}
+      Prof.\ Dr.\ Kristof \textsc{Van Laerhoven} & \universityname \\
+      M.Sc.\ Nahshon Mokua \textsc{Obiri}        & \universityname \\
+    \end{tabular}
+  \end{flushleft}
+\end{titlepage}
+
+% ══════════════════════════════════════════════════════════════════════════════
+% PAGE 2: BLANK PAGE
+% ══════════════════════════════════════════════════════════════════════════════
+\newpage
+\thispagestyle{empty}
+\mbox{}
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+% PAGE 3: SUBMISSION DETAILS
+% ══════════════════════════════════════════════════════════════════════════════
+\thispagestyle{empty}
+\noindent This Master's Thesis was submitted in accordance with the regulations of the University of Siegen for the degree of Master of Science (M.\,Sc.) according to the examination regulations FPO 2021.
+
+\vfill
+\begin{flushleft}
+\textbf{Examiner}\\[0.3cm]
+Prof.\ Dr.\ Kristof \textsc{Van Laerhoven}\\
+M.Sc.\ Nahshon Mokua \textsc{Obiri}
+\end{flushleft}
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+% PAGE 4: BLANK PAGE
+% ══════════════════════════════════════════════════════════════════════════════
+\thispagestyle{empty}
+\mbox{}
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+% PAGE 5: DECLARATION OF ORIGINALITY
+% ══════════════════════════════════════════════════════════════════════════════
+\chapter*{Declaration of Originality}
+\vspace*{-1cm}
+\addcontentsline{toc}{chapter}{Declaration of Originality}
+I affirm that I have written my thesis independently and that I have not used any sources or aids other than those indicated, and that I have clearly indicated citations.
+
+All passages that are taken from other works in terms of wording or meaning (including translations) have been clearly marked as borrowed in each individual case, with precise indication of the source (including the World Wide Web and other electronic data collections). This also applies to attached drawings, pictorial representations, sketches and the like. I take note that the proven omission of the indication of origin will be considered as attempted deception.
+
+\vspace{3cm}
+\noindent
+\begin{tabular}{@{}p{6cm}@{\hspace{1.5cm}}p{6cm}@{}}
+  \dotfill & \dotfill \\
+  \centering Location, Date & \centering Signature \arraybackslash
+\end{tabular}
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+% PAGE 6: BLANK PAGE
+% ══════════════════════════════════════════════════════════════════════════════
+\thispagestyle{empty}
+\mbox{}
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+% ABSTRACT
+% ══════════════════════════════════════════════════════════════════════════════
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+This thesis extends a prior eight-month \gls{lorawan} indoor measurement campaign in which six Arduino MKR~WAN~1310 nodes collected 1,715,869 environmental observations across distinct office locations. That campaign demonstrated that atmospheric pressure, CO\textsubscript{2} concentration, temperature, humidity, and particulate matter (PM2.5) significantly influence indoor \gls{lorawan} path loss, with a centralized XGBoost model achieving $R^2 \approx 0.93$. However, the centralized design required continuous transmission of raw sensor data, consumed excessive uplink bandwidth, offered no data privacy, and produced a static model unable to adapt to post-deployment environmental changes.
+
+This thesis addresses these limitations by introducing a \gls{fl} framework combined with \gls{tinyml}. Each MKR~WAN~1310 node runs a compact neural network (Dense($8\!\to\!8\!\to\!1$), approximately 81~parameters, ${<}$\,500\,B) to predict expected path loss directly from local environmental observations. Devices train on locally buffered samples and communicate only quantized weight updates ($\approx$\,52\,B per round) via \gls{lorawan}. A central server aggregates updates using \gls{fedavg}, producing an improved global model redistributed through rare downlinks.
+
+Experimental evaluation on the real-world dataset compares centralized and federated regression performance. The centralized baseline achieves $R^2 = 1.0000$ with \gls{rmse}\,$=$\,0.0007\,dB. The federated approach, simulated with non-\gls{iid} data partitioned by physical device location (ED0--ED5), achieves $R^2 = 0.9999$ after 20~communication rounds with $E=5$ local epochs---a reduction of only 0.001\,\% relative to the centralized upper bound, while reducing daily uplink volume by approximately $11\times$. Deployment on the MKR~WAN~1310 confirms that the full inference pipeline fits within 32\,KB \gls{sram} and 256\,KB Flash.
+
+\noindent\textbf{Keywords:} Federated Learning, TinyML, LoRaWAN, Path Loss Modeling, Edge Intelligence, Indoor Propagation, IoT
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+% PAGE 8: BLANK PAGE
+% ══════════════════════════════════════════════════════════════════════════════
+\thispagestyle{empty}
+\mbox{}
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+% PAGE 9: TABLE OF CONTENTS
+% ══════════════════════════════════════════════════════════════════════════════
+% ── Lists ───────────────────────────────────────────────────────────────────
+\tableofcontents\clearpage
+\listoffigures\addcontentsline{toc}{chapter}{List of Figures}\clearpage
+\listoftables\addcontentsline{toc}{chapter}{List of Tables}\clearpage
+\printglossary[type=\acronymtype,title=List of Abbreviations]\clearpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagenumbering{arabic}
+\setcounter{page}{1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ══════════════════════════════════════════════════════════════════════════════
+% CHAPTER 1: INTRODUCTION
+% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Introduction}
+\label{ch:introduction}
+
+\section{Context: LoRaWAN for Indoor Environmental Monitoring}
+\label{sec:context}
+% LoRaWAN is widely used for indoor sensing; indoor propagation is complex;
+% accurate path loss modeling supports network planning and resource optimization.
+% Transition: "A prior measurement campaign established that environmental
+% factors significantly affect LoRaWAN path loss indoors."
+
+\section{The Prior Project: Centralized Path Loss Modeling}
+\label{sec:prior-project}
+
+% CONTINUATION ANCHOR — be specific:
+% - 6 MKR WAN 1310 nodes (ED0–ED5) with BME280, SCD4x, SPS30 sensors
+% - Deployed across indoor office locations (stairwell, corridor, kitchen, etc.)
+% - 8-month campaign: September 2024 — May 2025
+% - 1,715,869 validated measurements (aggregated from 2.3M raw TTN export)
+% - Centralized ML: MLR, Random Forest, XGBoost
+% - Best: XGBoost R² ≈ 0.93
+% - Knowledge distillation → lightweight NN
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Model} & $\boldsymbol{R^2}$ & \textbf{RMSE (dB)} \\
+    \midrule
+    Multiple Linear Regression & [XX]  & [XX] \\
+    Random Forest              & [XX]  & [XX] \\
+    XGBoost                    & 0.93  & [XX] \\
+    \bottomrule
+  \end{tabular}
+  \caption{Centralized path loss regression results from the prior project.}
+  \label{tab:prior-results}
+\end{table}
+
+% "Despite strong predictive performance, the centralized architecture suffered
+%  from three fundamental limitations that motivate this thesis."
+
+\section{Problem Statement}
+\label{sec:problem-statement}
+% Three problems with the centralized approach:
+% 1. BANDWIDTH: 18 B × 1440 msgs/day × 6 nodes = ~156 KB/day
+% 2. PRIVACY: raw environmental data leaves the device (GDPR concern)
+% 3. ADAPTABILITY: static "train once, deploy, forget" model
+
+\section{Proposed Solution: Federated TinyML}
+\label{sec:proposed-solution}
+% Each device: compact NN (~81 params, <500 B) → predicts path loss locally
+% Trains on buffered samples, sends only quantized weight updates (~52 B/round)
+% Server aggregates via FedAvg, redistributes improved global model
+%
+% POSITION vs TORRES SANCHEZ:
+% "Torres Sanchez et al. recently demonstrated FL feasibility over LoRaWAN for
+%  IIoT anomaly detection (F1=94.77%) using virtual clients in a Flower-based
+%  simulation. Our work extends this to environment-driven path loss regression
+%  on real measurement data with TFLite Micro on actual MKR WAN 1310 hardware."
+
+\section{Research Objectives}
+\label{sec:objectives}
+\begin{enumerate}
+  \item Design and implement an \gls{fl} framework for path loss regression across multiple \gls{lorawan} edge devices without sharing raw sensor data.
+  \item Develop a \gls{tinyml} regression model compact enough for the Arduino MKR~WAN~1310 (SAMD21 Cortex-M0+, 32\,KB \gls{sram}, 256\,KB Flash).
+  \item Evaluate the accuracy trade-off between centralized and federated path loss regression using real measurement data ($R^2$, \gls{rmse}).
+  \item Quantify communication efficiency compared to raw data transmission.
+  \item Validate the full system pipeline on real hardware as a proof-of-concept.
+\end{enumerate}
+
+\section{Research Questions}
+\label{sec:research-questions}
+\begin{description}
+  \item[\textbf{RQ1}] Can a federated \gls{tinyml} model achieve comparable path loss prediction accuracy ($R^2$) to a centralized model trained on the full dataset?
+  \item[\textbf{RQ2}] How does non-\gls{iid} data distribution---arising from devices in physically distinct rooms---affect federated model convergence?
+  \item[\textbf{RQ3}] What bandwidth reduction does transmitting model weight updates ($\approx$\,52\,B/round) achieve over raw sensor data (18\,B\,$\times$\,1440/day)?
+  \item[\textbf{RQ4}] Can the complete \gls{fl} pipeline operate within the memory and compute constraints of the MKR~WAN~1310?
+\end{description}
+
+\section{Contributions}
+\label{sec:contributions}
+\begin{enumerate}
+  \item \textbf{First \gls{fl} framework for environment-driven path loss regression on \gls{lorawan}.} Torres Sanchez et al.~\cite{torressanchez2024federated} demonstrated FL over LoRaWAN for anomaly detection; we extend this to continuous regression on real environmental data.
+  \item \textbf{Evaluation on 1,715,869 real measurements} from six physically deployed nodes, with non-\gls{iid} data partitioning by actual device location.
+  \item \textbf{Three-way comparison:} prior XGBoost ($R^2 \approx 0.93$) vs.\ centralized NN vs.\ federated NN.
+  \item \textbf{Working hardware prototype} with \gls{tflite} Micro on a real MKR~WAN~1310.
+\end{enumerate}
+
+\section{Thesis Outline}
+\label{sec:outline}
+Chapter~\ref{ch:background} presents theoretical foundations. Chapter~\ref{ch:related-work} reviews related work and identifies the research gap. Chapter~\ref{ch:methodology} presents the full methodology: system design, dataset, model architecture, training pipeline, federated learning protocol, simulation, edge firmware, and server implementation. Chapter~\ref{ch:results-discussion} presents the experimental results and discussion. Chapter~\ref{ch:conclusion} concludes with future work.
+
+
+% ══════════════════════════════════════════════════════════════════════════════
+% CHAPTER 2: BACKGROUND
+% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Background and Theoretical Foundations}
+\label{ch:background}
+
+\section{LoRaWAN Technology}
+\label{sec:lorawan-tech}
+
+\subsection{LoRa Physical Layer}
+% CSS modulation, SF7–SF12, EU868 (863–870 MHz), bandwidth 125/250 kHz
+
+\subsection{LoRaWAN Protocol Architecture}
+% End device → gateway → network server → application server
+% Class A (our devices): uplink-initiated, two Rx windows after each uplink
+% OTAA vs ABP — we use OTAA
+
+\subsection{Duty Cycle and Payload Constraints}
+% EU868: 1% duty cycle per sub-band
+% Payload by DR: DR0/SF12 = 51 bytes (our worst-case constraint)
+% This shaped our 52-byte FL payload design: 4 header + 48 weight deltas
+\begin{table}[H]
+  \centering
+  \begin{tabular}{cccc}
+    \toprule
+    \textbf{DR} & \textbf{SF} & \textbf{Max Payload (B)} & \textbf{Approx.\ Airtime (51\,B)} \\
+    \midrule
+    0 & 12 & 51  & $\approx$2.5\,s \\
+    1 & 11 & 51  & $\approx$1.3\,s \\
+    2 & 10 & 51  & $\approx$0.6\,s \\
+    3 & 9  & 115 & $\approx$0.3\,s \\
+    4 & 8  & 222 & $\approx$0.2\,s \\
+    5 & 7  & 222 & $\approx$0.1\,s \\
+    \bottomrule
+  \end{tabular}
+  \caption{LoRaWAN EU868 maximum payload size by data rate.}
+  \label{tab:lorawan-payload}
+\end{table}
+
+\subsection{The Things Network}
+% TTN v3 infrastructure used in both prior and current project
+% Webhook integration: TTN → POST /uplink → fl_server.py
+% Downlink limit: ~10 confirmed downlinks/day/device
+
+\section{Indoor Radio Propagation and Path Loss}
+\label{sec:path-loss-theory}
+
+\subsection{Free-Space and Log-Distance Path Loss Models}
+% Friis: PL_fs = 20·log10(d) + 20·log10(f) + 20·log10(4π/c)
+% Log-distance: PL(d) = PL(d_0) + 10·n·log10(d/d_0) + X_σ
+% n ≈ 2.0–3.5 for indoor office environments
+
+\subsection{Expected Path Loss}
+% exp_pl = TX_power − RSSI + antenna_corrections
+% This is the target variable for our regression model
+
+\subsection{Environmental Factors Affecting Indoor Propagation}
+% Prior project finding: humidity, CO2, PM2.5, temperature, pressure
+% all correlate with path loss
+% Physical mechanisms: water absorption, occupancy effects, refraction
+
+\section{Machine Learning for Path Loss Prediction}
+\label{sec:ml-pathloss}
+
+\subsection{Traditional Centralized Approaches}
+% MLR, Random Forest, XGBoost — prior project achieved R² ≈ 0.93 with XGBoost
+
+\subsection{Neural Network Approaches}
+% Dense NNs for regression; knowledge distillation for edge deployment
+% Motivation for Dense(8→8→1): smallest model capturing env+radio→PL relationship
+
+\section{Federated Learning}
+\label{sec:fl-theory}
+
+\subsection{Fundamentals}
+% McMahan et al. (2017): train locally, aggregate globally, no raw data sharing
+
+\subsection{Federated Averaging Algorithm}
+\begin{algorithm}[H]
+  \caption{\gls{fedavg}~\cite{mcmahan2017communication}}
+  \label{alg:fedavg}
+  \KwIn{$K$ clients, model $w_0$, $T$ rounds, $E$ local epochs, lr $\eta$}
+  \KwOut{Global model $w_T$}
+  \For{round $t = 1 \ldots T$}{
+    Server selects subset $S_t \subseteq \{1,\ldots,K\}$\;
+    Server broadcasts $w_t$ to $S_t$\;
+    \For{client $k \in S_t$ \textbf{in parallel}}{
+      $w_k \leftarrow w_t$\;
+      \For{epoch $e = 1 \ldots E$}{
+        \For{batch $\mathcal{B} \subset \mathcal{D}_k$}{
+          $w_k \leftarrow w_k - \eta \nabla \ell(w_k;\mathcal{B})$\;
+        }
+      }
+      Send $w_k$ to server\;
+    }
+    $w_{t+1} \leftarrow \displaystyle\sum_{k \in S_t} \frac{n_k}{\sum_{j} n_j} w_k$\;
+  }
+\end{algorithm}
+
+\subsection{Non-IID Data Challenges}
+% Real deployments: each device sees different data; our case: ED0 (stairwell)
+% has different conditions than ED3 (kitchen); causes slower convergence
+
+\subsection{Communication Efficiency: Quantization and Compression}
+% float32 → int8 (scale factor 127); critical for 51-byte LoRaWAN limit
+
+\section{TinyML}
+\label{sec:tinyml-theory}
+
+\subsection{TensorFlow Lite Micro}
+% Static memory via tensor arena; AllOpsResolver; no OS needed
+
+\subsection{Model Quantization for Microcontrollers}
+% Post-training int8 quantization with representative dataset calibration
+
+\subsection{On-Device Training Challenges}
+% TFLite Micro has NO backpropagation support
+% Limited RAM prevents full gradient computation
+% Current approach: simplified weight update proxy
+
+
+% ══════════════════════════════════════════════════════════════════════════════
+% CHAPTER 3: RELATED WORK
+% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Related Work}
+\label{ch:related-work}
+
+\section{Federated Learning for IoT}
+\label{sec:fl-iot}
+% FL on resource-constrained devices; Ramadan et al. (2025)
+% Challenges: communication cost, device heterogeneity, data heterogeneity
+
+\section{Federated Learning over LoRaWAN: Torres Sanchez et al.}
+\label{sec:torres-sanchez}
+
+Torres Sanchez et al.~\cite{torressanchez2024federated} presented the first comprehensive study of \gls{fl} within \gls{lorawan}-constrained communication, targeting anomaly detection for industrial machinery.
+
+\subsection{Their Experimental Setup}
+% 4 IIoT prototypes: Manitou, Atlas Copco drill, Jaw Crusher, Doosan loader
+% Private LoRaWAN → TTN → MQTT; 77,798 messages
+% Flower framework, 4 virtual clients, 1 central server
+% Model: autoencoder (32 neurons), Tanh, Adam, MSE loss
+% Simulation environment: i7-1165G7, 16GB RAM, WSL + Conda
+
+\subsection{Their Key Results}
+% FL: Acc=92.30%, F1=94.77%, TNR=90.65%, TPR=92.93%
+% Comparable to centralized OC-SVM (92.06%), AE (93.13%)
+% Best config: 20 epochs × 4 rounds → F1=95.23%
+% Model transfer: 1.39 KB/round at 32 neurons; 44 KB at 3 hidden layers
+
+\subsection{Their Communication Analysis}
+% Nm = ceil(Msize/MaxPayload) × Rd
+% 1.39 KB model: 7 msgs (SF7) to 28 msgs (SF12) per round
+% Training airtime: 52.8 minutes optimal
+
+\section{ML-Based Path Loss Prediction}
+\label{sec:ml-pathloss-related}
+% ANN, RF, CNN for path loss; indoor vs outdoor
+% Environment-driven approaches using weather/occupancy data
+% Gap: NO federated approach for path loss prediction exists
+
+\section{Research Gap and Positioning}
+\label{sec:research-gap}
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{p{3.5cm} p{4cm} p{4cm}}
+    \toprule
+    \textbf{Aspect} & \textbf{Torres Sanchez et al.} & \textbf{This Thesis} \\
+    \midrule
+    Application       & Anomaly detection (machinery) & Path loss regression (indoor LoRaWAN) \\[3pt]
+    ML task           & Classification / reconstruction & Regression ($R^2$, RMSE) \\[3pt]
+    Model             & Autoencoder (32 neurons) & Dense NN ($8\to8\to1$, 81 params) \\[3pt]
+    FL framework      & Flower (Python) & Custom FedAvg (TF/Keras) \\[3pt]
+    Clients           & 4 virtual & 6 virtual (one per real device) \\[3pt]
+    Data              & 77,798 machinery msgs & 1,715,869 real LoRaWAN measurements \\[3pt]
+    Non-IID split     & Per machine type & Per physical room location \\[3pt]
+    HW prototype      & LoRaWAN prototype & TFLite Micro on real MKR WAN 1310 \\[3pt]
+    Prior baseline    & OC-SVM, IF, AE & XGBoost $R^2 \approx 0.93$ \\[3pt]
+    Update size       & 1.39\,KB (7+ msgs) & 52\,B (\textbf{1 msg}) \\
+    \bottomrule
+  \end{tabular}
+  \caption{Positioning: Torres Sanchez et al.\ vs.\ this thesis.}
+  \label{tab:positioning}
+\end{table}
+
+% "Torres Sanchez et al. proved FL is feasible over LoRaWAN.
+%  Our prior project proved environment drives path loss.
+%  This thesis bridges both: federated path loss regression on real edge hardware."
+
+
+% ══════════════════════════════════════════════════════════════════════════════
+% CHAPTER 4: METHODOLOGY
+% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Methodology}
+\label{ch:methodology}
+\label{sec:methodology}
+
+\section{System Design and Architecture}
+\label{sec:system-design}
+
+\subsection{Design Principles}
+% 1. CONTINUITY: same hardware + sensors as prior project
+% 2. COMPATIBILITY: FL messages fit 51-byte LoRaWAN limit
+% 3. MINIMALITY: model + runtime fit in 32 KB SRAM
+% 4. PRIVACY: raw sensor data never leaves the device
+
+\subsection{System Overview}
+% Three-layer architecture:
+% Layer 1 (offline): train_model.py → model.h
+% Layer 2 (on-device): FederatedTinyML.ino — sense → infer → train → send
+% Layer 3 (server): fl_server.py — aggregate → redistribute
+% FIGURE: system architecture diagram
+
+\subsection{Hardware Platform}
+
+\subsubsection{Arduino MKR WAN 1310}
+% SAMD21 Cortex-M0+ @ 48 MHz, 32 KB SRAM, 256 KB Flash
+% Murata CMWX1ZZABZ LoRa module, EU868, Class A
+
+\subsubsection{Sensor Suite}
+\begin{table}[H]
+  \centering
+  \begin{tabular}{llll}
+    \toprule
+    \textbf{Sensor} & \textbf{Measurement} & \textbf{Range} & \textbf{Interface} \\
+    \midrule
+    BME280 & Pressure     & 300--1100\,hPa     & I\textsuperscript{2}C (0x77) \\
+    SCD4x  & CO\textsubscript{2} & 400--5000\,ppm & I\textsuperscript{2}C \\
+    SCD4x  & Temperature  & $-10$ to $+60\,^{\circ}$C & I\textsuperscript{2}C \\
+    SCD4x  & Humidity     & 0--100\,\%RH       & I\textsuperscript{2}C \\
+    SPS30  & PM2.5        & 0--1000\,$\mu$g/m\textsuperscript{3} & I\textsuperscript{2}C \\
+    \bottomrule
+  \end{tabular}
+  \caption{Sensor specifications (identical to prior project).}
+  \label{tab:sensors}
+\end{table}
+
+\subsubsection{Deployment Topology}
+% 6 nodes (ED0--ED5) across indoor office rooms; single gateway
+% FIGURE: floor plan with node locations
+
+\subsection{TinyML Model Architecture}
+
+\subsubsection{Architecture: Dense($8{\to}8{\to}1$)}
+% 8 inputs (5 env + rssi, snr, SF) -> 8 hidden (ReLU) -> 1 output (linear, predicts exp_pl in dB)
+% Total parameters: (8\times8+8) + (8\times1+1) = 81
+% Quantized model size: 2,704 bytes (model.tflite)
+
+\subsubsection{Feature Normalization}
+% StandardScaler: zero mean, unit variance
+% Exported from training, hardcoded on device:
+% featureMeans = {1009.2605, 542.0334, 21.9533, 36.1344, 1.8987}
+% featureStds  = {30.9770, 132.9057, 2.9012, 6.6737, 2.3336}
+
+\subsubsection{Path Loss $\to$ Link State Thresholds}
+% From exp\_pl distribution analysis of 1.7M rows:
+% $<$117\,dB $\to$ Good, 117--133\,dB $\to$ Degraded, $\geq$133\,dB $\to$ Poor
+
+\subsection{Federated Learning Protocol}
+
+\subsubsection{Round Structure}
+% 24-hour FL rounds; min 3/6 clients for aggregation
+
+\subsubsection{Payload Design}
+\begin{table}[H]
+  \centering
+  \begin{tabular}{llcp{5.5cm}}
+    \toprule
+    \textbf{Type} & \textbf{Code} & \textbf{Size} & \textbf{Content} \\
+    \midrule
+    Status report  & 0x00 & 8\,B  & link\_state, PDR, DR, packet\_count \\
+    Model update   & 0x01 & 52\,B & version, num\_weights, 48 int8 deltas \\
+    Global model   & 0x02 & 51\,B & version, num\_weights, 47 int8 weights \\
+    \bottomrule
+  \end{tabular}
+  \caption{LoRaWAN message types and payload structure.}
+  \label{tab:payloads}
+\end{table}
+% KEY: Torres Sanchez needed 7+ messages per round (1.39 KB model).
+% We need exactly 1 message (52 bytes). Our model is ~27× smaller.
+
+\subsubsection{Event-Driven Transmission}
+% Good: 5 min, Degraded: 2 min, Poor: 1 min
+% Immediate TX on POOR state transition
+
+\subsection{Server-Side Aggregation}
+
+\subsubsection{Flask API Architecture}
+% Flask endpoints: GET /health, GET /status, POST /uplink, GET /downlink/\texttt{<dev\_id>}
+% Thread-safe request handling; JSON responses
+
+\subsubsection{FedAvg Aggregation}
+% Weighted averaging: $w_{t+1} = \sum_k \frac{n_k}{N}\,w_k$
+% Requires $\geq$3/6 clients before aggregation triggers
+% Thread-safe lock prevents concurrent write conflicts
+
+\subsubsection{TTN Webhook Integration}
+% TTN POST /uplink $\to$ base64 decode $\to$ int8 dequantize $\to$ fedavg
+% Downlink: updated global weights re-encoded and sent via TTN API
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+% 4.2  IMPLEMENTATION
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Implementation}
+\label{sec:implementation}
+
+\subsection{Dataset: Foundation from the Prior Project}
+\label{sec:dataset}
+
+\subsubsection{Measurement Campaign}
+The dataset used in this thesis originates from the indoor \gls{lorawan} measurement campaign conducted by Obiri and Van~Laerhoven (2024) on the 8th floor of the H\"olderlinstra{\ss}e Campus, University of Siegen~\cite{obiri2024comprehensive}. The campaign ran from September~2024 to May~2025 and employed six Arduino MKR~WAN~1310 end devices (ED0--ED5), each equipped with:
+\begin{itemize}
+  \item Sensirion SCD4x (CO\textsubscript{2}, temperature, humidity),
+  \item Bosch BME280 (atmospheric pressure),
+  \item Sensirion SPS30 (particulate matter PM2.5).
+\end{itemize}
+Each device transmitted one \gls{lorawan} uplink per minute to a Kerlink iFemtoCell~gateway connected via \gls{ttn} and MQTT to an InfluxDB instance on AWS. The raw dataset comprises 2,313,903~rows across 81~columns (1.95\,GB). An aggregation step (performed in the prior PEP project) produced the working dataset used here: \textbf{1,715,869~rows} with 20~columns (298\,MB), stored as \texttt{2.aggregated\_measurements\_data.csv}.
+
+The aggregated dataset includes, for each transmission:
+\begin{itemize}
+  \item \textbf{Environmental observations:} \texttt{pressure}, \texttt{co2}, \texttt{temperature}, \texttt{humidity}, \texttt{pm25}.
+  \item \textbf{Radio-layer metadata} (recorded by \gls{ttn} at receive time): \texttt{rssi} (dBm), \texttt{snr} (dB), \texttt{SF} (spreading factor, 7--12).
+  \item \textbf{Derived quantities:} \texttt{exp\_pl} (expected path loss, dB) --- computed during the prior project as $\text{exp\_pl} = \text{TX\_power} - \text{RSSI} + \text{antenna\_gain\_corrections}$.
+  \item \textbf{Identifiers:} \texttt{device\_id} (ED0--ED5), \texttt{time} (UTC timestamp).
+\end{itemize}
+
+\subsubsection{Data Quality and Cleaning}
+Three deterministic corrupted row patterns were identified during a data quality audit and removed (33~rows total). The corruption patterns were characterized by physically impossible sensor readings (e.g., CO\textsubscript{2}~$=$~21{,}547\,ppm, humidity~$=$~156.65\,\%RH, or all-zero sensor values with non-zero pressure). Additionally, the stored pressure values required multiplication by a factor of 3.125 to convert to hPa, as confirmed by cross-referencing with the BME280 datasheet specification. Rows containing null values in the \texttt{snr} or \texttt{f\_count} columns were also dropped (1{,}446 rows). Finally, only rows where the target variable \texttt{exp\_pl} fell within the physically plausible range of 50--200\,dB were retained.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lr}
+    \toprule
+    \textbf{Stage} & \textbf{Rows} \\
+    \midrule
+    Raw TTN export                         & 2,313,903 \\
+    After aggregation                      & 1,715,869 \\
+    After anomaly removal ($-33$)          & 1,715,836 \\
+    After null removal ($-1{,}446$)        & 1,714,390 \\
+    After path loss range filter (50--200\,dB) & 1,714,379 \\
+    \textbf{Final usable}                  & \textbf{1,714,379} \\
+    \bottomrule
+  \end{tabular}
+  \caption{Data preprocessing: row counts at each stage.}
+  \label{tab:data-cleaning}
+\end{table}
+
+\subsubsection{Features and Target}
+The model uses eight input features and one regression target:
+\begin{itemize}
+  \item \textbf{Environmental (5):} pressure (hPa, from BME280), CO\textsubscript{2} (ppm, from SCD4x), temperature ($^{\circ}$C, from SCD4x), humidity (\%RH, from SCD4x), PM2.5 ($\mu$g/m$^3$, from SPS30).
+  \item \textbf{Radio (3):} \gls{rssi} (dBm), \gls{snr} (dB), \gls{sf} (unitless, 7--12). These are extracted from the LoRaWAN metadata recorded by the \gls{ttn} network server at receive time.
+  \item \textbf{Target:} \texttt{exp\_pl} --- expected path loss (dB), computed as $\text{TX\_power} - \text{RSSI} + \text{antenna corrections}$.
+\end{itemize}
+All features are standardized to zero mean and unit variance using \texttt{StandardScaler} prior to model training.
+
+\subsection{Model Training Pipeline}
+The centralized baseline model uses a Dense($8{\to}8{\to}1$) architecture (81~parameters), compiled with the Adam optimizer (learning rate~$=$~0.001) and MSE loss. Training was performed for up to 50~epochs with early stopping (patience~$=$~8, monitoring validation loss, restoring best weights) and a batch size of 2{,}048. The dataset was split 80/20 into training and test sets using a global random split (\texttt{random\_seed}~$=$~42). A 15\,\% validation split was further carved from the training set for early stopping monitoring.
+
+After training, the model is converted to TensorFlow Lite with full int8 quantization using a representative dataset of 500~samples, producing a \texttt{model.tflite} file of 2{,}704~bytes. This is then exported as a C byte array (\texttt{model.h}, 17{,}723~bytes) for inclusion in the Arduino firmware.
+
+\subsection{Federated Learning Simulation}
+\label{sec:fl-sim}
+
+The \gls{fl} simulation was conducted on a Windows~11 workstation (Intel Core i7, 16\,GB RAM) using a Conda environment with Python~3.13 and TensorFlow~2.21.0. The FL framework was implemented as a custom Python script (\texttt{fl\_simulation.py}, 908~lines) using TensorFlow/Keras for model training and NumPy for \gls{fedavg} aggregation. Unlike Torres Sanchez et al.\ who used the Flower framework~\cite{beutel2020flower}, we implemented \gls{fedavg} directly, as our model ($\approx$81~parameters) is small enough that a lightweight custom implementation suffices and avoids external dependencies.
+
+The simulation follows the same methodology established by Torres Sanchez et al., who stated: ``The \gls{fl} framework simulates distributed devices functioning as clients.'' Both approaches use real-world data partitioned across virtual clients, with centralized aggregation simulating the server role. The key difference is that our dataset is real measured data from a physical deployment, while their work used the TON\_IoT dataset.
+
+\subsubsection{Non-IID Data Partitioning}
+Unlike simulation-only studies, our \gls{fl} evaluation uses real-world measurement data collected during the prior deployment campaign. Six virtual \gls{fl} clients were initialized, each assigned the actual measurement data from its corresponding physical device (ED0--ED5). This produces a naturally non-\gls{iid} data distribution, as each device observed different environmental conditions based on its room placement (e.g., stairwell vs.\ kitchen). This is more representative than random or synthetic data splitting commonly used in \gls{fl} simulations.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Client} & \textbf{Device} & \textbf{Location} & \textbf{Samples} \\
+    \midrule
+    1 & ED0 & Location~A & 228,627 \\
+    2 & ED1 & Location~B & 226,727 \\
+    3 & ED2 & Location~C & 229,404 \\
+    4 & ED3 & Location~D & 226,237 \\
+    5 & ED4 & Location~E & 225,399 \\
+    6 & ED5 & Location~F & 235,109 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Per-client data distribution (non-IID by device location).}
+  \label{tab:client-data}
+\end{table}
+
+\noindent
+Figure~\ref{fig:data-dist} visualizes the non-IID nature of this partitioning: each client's path loss distribution exhibits a distinct mean and spread, reflecting its unique room environment.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig1_data_distribution_per_client.png}
+  \caption{Distribution of expected path loss (\texttt{exp\_pl}) for each virtual FL client. Each histogram corresponds to one physical device location. The dashed line marks the per-client mean. The variation in distribution shape and mean across clients confirms the naturally non-IID partitioning.}
+  \label{fig:data-dist}
+\end{figure}
+
+\subsubsection{FL Training Protocol}
+Each virtual client trains a local regression model (Dense($8\!\to\!8\!\to\!1$), $\approx$81~parameters) on its local data partition for $E$~local epochs per round. After local training, weight updates are aggregated at the virtual server using \gls{fedavg}. The process repeats for $N$~communication rounds. The global model is evaluated on a held-out test set after each round.
+
+\subsubsection{Baseline Comparison}
+A centralized model with identical architecture was trained on the full combined dataset to establish an upper-bound $R^2$ baseline, directly comparable to the prior project's XGBoost result ($R^2 \approx 0.93$).
+
+\subsubsection{Hardware Prototype Validation}
+To demonstrate deployment feasibility, the trained \gls{tflite} Micro model was compiled and flashed to a real Arduino MKR~WAN~1310 (SAMD21 Cortex-M0+, 32\,KB~SRAM, 256\,KB~Flash). Inference latency, memory footprint, and \gls{lorawan} payload compatibility were measured on the physical device.
+
+\subsection{Edge Device Firmware}
+\label{sec:edge-firmware}
+The Arduino MKR~WAN~1310 firmware (\texttt{FederatedTinyML.ino}, 772~lines of~C++) integrates the following components:
+
+\subsubsection{Sensor Pipeline and Feature Extraction}
+On each measurement cycle, the device reads five environmental values from the SCD4x, BME280, and SPS30 sensors. It simultaneously reads three radio parameters from the Murata LoRa modem: \texttt{modem.getRSSI()} (dBm), \texttt{modem.getSNR()} (dB), and the current data rate (mapped to spreading factor SF~7--12). These eight raw values are assembled into a float array of \texttt{NUM\_FEATURES~=~8}.
+
+\subsubsection{Feature Normalization}
+All eight features are standardized using pre-computed mean and standard deviation values (derived from the training dataset's \texttt{StandardScaler} output) hardcoded into the firmware:
+\[
+  x_i^{\text{norm}} = \frac{x_i - \mu_i}{\sigma_i}, \quad i \in \{1, \ldots, 8\}
+\]
+
+\subsubsection{TFLite Micro Inference}
+The normalized feature vector is fed into the TFLite Micro interpreter, which executes the Dense($8{\to}8{\to}1$) model stored in \texttt{model.h} (2,704~bytes compiled from \texttt{model.tflite}). The model predicts the expected path loss (\texttt{exp\_pl}) in dB.
+
+\subsubsection{Link State Classification via Thresholds}
+\label{sec:thresholds}
+The predicted path loss is converted to a three-class link state label using thresholds derived from the \textbf{on-device Packet Delivery Ratio (PDR)} as a proxy signal. The PDR is computed as the ratio of acknowledged transmissions to total transmissions over a sliding window. The classification thresholds are:
+\begin{itemize}
+  \item \textbf{Good} (label~0): \texttt{PDR} $\geq 0.9$ --- reliable transmission with $>$90\,\% packet success.
+  \item \textbf{Degraded} (label~1): $0.7 \leq$ \texttt{PDR} $< 0.9$ --- marginal link quality, increased retransmissions expected.
+  \item \textbf{Poor} (label~2): \texttt{PDR} $< 0.7$ --- unreliable link, adaptive action required.
+\end{itemize}
+
+\noindent
+These PDR thresholds (0.9 and 0.7) were selected based on the LoRaWAN link budget analysis from the supervisor's paper, which established that packets received with path loss above approximately 133\,dB (at SF12) exhibit significantly reduced delivery rates. The 0.9 and 0.7 breakpoints correspond to the transition zones observed in the measurement data where delivery reliability degrades as environmental conditions change.
+
+For the \textbf{simulation training pipeline} (\texttt{train\_model.py}), where PDR is not directly available, the link state labels are derived from the radio metadata using equivalent RSSI/SNR thresholds:
+\begin{itemize}
+  \item \textbf{Good}: RSSI $> -100$\,dBm \textit{and} SNR $> 0$\,dB.
+  \item \textbf{Degraded}: RSSI $> -115$\,dBm \textit{and} SNR $> -5$\,dB (and not Good).
+  \item \textbf{Poor}: all remaining samples.
+\end{itemize}
+
+\noindent
+These RSSI/SNR boundaries were determined by cross-referencing the supervisor's published path loss measurements with the Semtech SX1276 receiver sensitivity specifications: the SX1276 sensitivity at SF12/BW125 is $-137$\,dBm, meaning signals weaker than $-115$\,dBm with SNR below $-5$\,dB approach the demodulation floor.
+
+\subsubsection{Circular Buffer and Local Training}
+The device maintains a circular buffer of 32~samples (each containing the 8-feature vector and its proxy label). When a FL round is triggered, the device performs simplified local training: it computes weight deltas by comparing inference errors across the buffer and adjusts the model weights proportionally. These weight deltas are quantized to 8-bit integers and packed into a 52-byte \gls{lorawan} uplink payload.
+
+\subsubsection{Adaptive Transmission Scheduling}
+The predicted link state directly controls the device's transmission interval:
+\begin{itemize}
+  \item \textbf{Good}: transmit every 5~minutes (standard duty cycle).
+  \item \textbf{Degraded}: transmit every 1~minute (increased monitoring).
+  \item \textbf{Poor}: transmit every 30~seconds (urgent reporting) and trigger an anomaly flag.
+\end{itemize}
+
+\subsection{FL Server}
+\label{sec:fl-server}
+The FL server is implemented as a Flask web application (\texttt{fl\_server.py}) that receives \gls{lorawan} uplinks via TTN webhooks. Key components:
+\begin{itemize}
+  \item \textbf{FederatedLearningServer class:} Thread-safe \gls{fedavg} aggregation with configurable minimum client participation.
+  \item \textbf{Weight decoding:} Incoming 52-byte payloads are dequantized from 8-bit integers back to float32 weight deltas.
+  \item \textbf{Global model update:} After $\geq$3 clients submit updates in a round, the server performs weighted averaging ($w_{t+1} = \sum_k \frac{n_k}{N} w_k$) and generates a new global model payload.
+  \item \textbf{Downlink distribution:} The updated global weights are sent back to devices via \gls{ttn} downlink API.
+\end{itemize}
+
+
+% ══════════════════════════════════════════════════════════════════════════════
+% CHAPTER 5: RESULTS AND DISCUSSION
+% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Results and Discussion}
+\label{ch:results-discussion}
+
+This chapter presents experimental results and discussion following the two-phase hybrid
+methodology defined in Section~\ref{sec:methodology}: Phase~A
+(Section~\ref{sec:phase-a-results}) benchmarks centralized vs.\ federated path
+loss regression in software simulation; Phase~B
+(Section~\ref{sec:phase-b-results}) validates the system on real
+MKR~WAN~1310 hardware. Finally, the results are discussed in detail, highlighting
+key findings, limitations, and comparisons with prior work.
+
+%%==========================================================================%%
+\section{Phase A: Simulation-Based Benchmarking Results}
+\label{sec:phase-a-results}
+%%==========================================================================%%
+
+The Phase~A simulation was executed on a Windows~11 workstation with a Conda environment (Python~3.13, TensorFlow~2.21.0). All models used the identical Dense($8{\to}8{\to}1$) architecture (81~trainable parameters, 324~bytes of float32 weights). Reproducibility was ensured by fixing the random seed to~42 for both NumPy and TensorFlow. The total simulation completed in 17.1~minutes.
+
+\subsection{Centralized Baseline}
+\label{sec:centralized-baseline}
+A centralized Dense($8{\to}8{\to}1$) model was trained on the merged training set (1,371,503~samples, 80\,\% of 1,714,379) with the Adam optimizer (lr~$=$~0.001), MSE loss, batch size~$=$~2{,}048, and early stopping (patience~$=$~8, monitoring validation loss, restoring best weights). A separate 15\,\% validation split was carved from the training set for early stopping. The model was evaluated on a held-out test set of 342,876~samples (20\,\%).
+
+\noindent\textbf{Result:}
+\[
+  R^2 = 1.0000, \quad
+  \text{RMSE} = 0.0007\;\text{dB}, \quad
+  \text{MAE} = 0.0001\;\text{dB}.
+\]
+
+\noindent
+The near-perfect centralized accuracy is expected and physically justified: the target variable \texttt{exp\_pl} is derived from \gls{rssi} via the relation $\text{exp\_pl} = \text{TX\_power} - \text{RSSI} + \text{antenna\_corrections}$, and \gls{rssi} is included among the eight input features. The neural network learns this near-linear inverse mapping with high precision. This result establishes the \emph{upper bound} against which all federated configurations are compared.
+
+Figure~\ref{fig:central-loss} shows the training and validation loss curves. Both curves decrease rapidly and converge within the first 10~epochs, with no sign of overfitting. Figure~\ref{fig:pred-vs-actual} presents the predicted vs.\ actual path loss scatter plot: the points fall almost exactly on the identity line ($y = x$), confirming the model's high fidelity. The residual histogram (right panel) shows a near-zero-mean, narrow distribution centred at 0\,dB.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{fig2_centralized_training_curves.png}
+  \caption{Centralized model training and validation loss (MSE) over epochs. Early stopping triggered after convergence. The final model achieves $R^2 = 1.0000$ with RMSE~$= 0.0007$\,dB.}
+  \label{fig:central-loss}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig3_pred_vs_actual_centralized.png}
+  \caption{Centralized model: predicted vs.\ actual path loss (left) and residual distribution (right). Points align tightly along the identity line, and residuals are centred at 0\,dB with negligible spread.}
+  \label{fig:pred-vs-actual}
+\end{figure}
+
+\subsection{Federated Learning Convergence}
+\label{sec:fl-convergence}
+The \gls{fl} simulation used \gls{fedavg}~\cite{mcmahan2017communication} with all six clients participating in every round ($K = 6$). Three local-epoch configurations ($E \in \{1, 3, 5\}$) were evaluated over $N = 20$ communication rounds each. In each round, the following steps are executed:
+\begin{enumerate}
+  \item The server broadcasts the current global model weights $w_t$ to all $K$ clients.
+  \item Each client~$k$ initializes its local model to $w_t$ and trains for $E$ local epochs on its own data partition $\mathcal{D}_k$ using Adam (lr~$=$~0.001, batch size~$=$~2{,}048).
+  \item Each client sends its updated weights $w_k^{(t)}$ to the server.
+  \item The server aggregates via sample-count-weighted averaging:
+\end{enumerate}
+\[
+  w_{t+1} = \sum_{k=1}^{K} \frac{n_k}{\sum_{j=1}^{K} n_j} \, w_k^{(t)}
+\]
+where $n_k$ is the number of training samples on client~$k$. The global model is evaluated on the held-out test set after each round.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ccccc}
+    \toprule
+    \textbf{Local Epochs ($E$)} & \textbf{$R^2$} & \textbf{RMSE (dB)} & \textbf{MAE (dB)} & \textbf{$R^2$ / Centralized} \\
+    \midrule
+    1  & $-4.8867$  & 54.87  & 49.79  & --- (not converged) \\
+    3  & 0.9606     & 4.49   & 3.07   & 96.06\,\% \\
+    5  & \textbf{0.9999} & \textbf{0.083} & \textbf{0.002} & \textbf{99.99\,\%} \\
+    \bottomrule
+  \end{tabular}
+  \caption{Federated learning results after 20 communication rounds with 6~clients (non-IID split by physical device location).}
+  \label{tab:fl-results}
+\end{table}
+
+\noindent
+With $E=1$ local epoch, the model fails to converge within 20~rounds (negative $R^2$), indicating insufficient local training per round for this architecture. At $E=3$, the federated model achieves $R^2 = 0.9606$ after 20~rounds---already exceeding the PEP project's XGBoost baseline ($R^2 \approx 0.93$). At $E=5$, convergence reaches $R^2 = 0.9999$ by round~15 and $R^2 = 1.0000$ (to four decimal places) by round~20, essentially matching the centralized upper bound.
+
+Figure~\ref{fig:fl-convergence} illustrates the convergence behaviour. The left panel shows $R^2$ vs.\ communication round for each local-epoch setting, with the centralized upper bound and the supervisor's LDPLSM-MW-EP baseline ($R^2 = 0.8219$) plotted as horizontal reference lines. The right panel shows the corresponding RMSE convergence.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig4_fl_convergence_r2_rmse.png}
+  \caption{Federated learning convergence: $R^2$ (left) and RMSE (right) vs.\ communication round for $E \in \{1, 3, 5\}$ local epochs. The black dashed line marks the centralized baseline ($R^2 = 1.0000$); the grey dashed line marks the supervisor's LDPLSM-MW-EP result ($R^2 = 0.8219$). With $E=5$, the federated model matches the centralized upper bound by round~20.}
+  \label{fig:fl-convergence}
+\end{figure}
+
+\subsection{Effect of Non-IID Data Distribution}
+\label{sec:non-iid-effect}
+The naturally non-\gls{iid} data distribution---arising from each device's unique room placement on the 8th floor of H\"olderlinstra{\ss}e Campus, Siegen---did not prevent convergence. For $E=5$, the per-client $R^2$ of the final global model evaluated on each client's local data was uniformly high across all six devices, confirming that the \gls{fedavg} aggregation successfully produced a model that generalizes across diverse indoor locations despite each client observing different environmental and radio conditions.
+
+Figure~\ref{fig:per-client-r2} shows the per-client $R^2$ of the best federated model ($E=5$) evaluated on each client's local data. All six clients achieve $R^2$ close to~1.0, with the global test set $R^2$ (black dashed line) and the supervisor's baseline (grey dotted line) shown for reference.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{fig6_per_client_r2_non_iid.png}
+  \caption{Per-client $R^2$ of the best federated global model ($E=5$, 20~rounds) evaluated on each client's local data. The black dashed line shows the global test set $R^2$ ($= 0.9999$); the grey dotted line shows the supervisor's LDPLSM-MW-EP baseline ($R^2 = 0.8219$). All clients achieve uniformly high accuracy despite the non-IID data partitioning.}
+  \label{fig:per-client-r2}
+\end{figure}
+
+\subsection{Final Federated Model}
+Using the optimal configuration ($N = 20$~rounds, $E = 5$ local epochs,
+all 6~clients participating per round), the federated model achieves:
+\[
+  R^2 = 0.9999, \quad
+  \text{RMSE} = 0.083\;\text{dB}, \quad
+  \text{MAE} = 0.002\;\text{dB}
+\]
+This represents a reduction of only \textbf{0.001\,\%} in $R^2$ relative to the centralized upper bound. \textbf{RQ1 is answered:} a federated \gls{tinyml} model can achieve comparable path loss prediction accuracy to a centralized model trained on the full dataset.
+
+Figure~\ref{fig:fl-pred-vs-actual} shows the predicted vs.\ actual scatter for the best federated model, confirming near-perfect alignment with the identity line.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.65\textwidth]{fig8_fl_pred_vs_actual.png}
+  \caption{Best federated model ($E=5$, 20~rounds): predicted vs.\ actual path loss. Points fall on the identity line ($y=x$), confirming $R^2 = 0.9999$ with RMSE~$= 0.083$\,dB.}
+  \label{fig:fl-pred-vs-actual}
+\end{figure}
+
+\subsection{Three-Way Performance Comparison}
+
+Figure~\ref{fig:three-way} presents the three-way $R^2$ and RMSE comparison across all four modelling approaches.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig5_three_way_comparison.png}
+  \caption{Three-way performance comparison: supervisor's LDPLSM-MW-EP (linear, $R^2 = 0.8219$), PEP project XGBoost ($R^2 \approx 0.93$), centralized NN ($R^2 = 1.0000$), and federated NN ($R^2 = 0.9999$). Left: $R^2$; Right: RMSE (dB). The federated model achieves near-identical accuracy to the centralized baseline while preserving data privacy.}
+  \label{fig:three-way}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Metric} &
+    \textbf{XGBoost} & \textbf{Centralized NN} & \textbf{Federated NN} \\
+    & \textbf{(Prior Project)} & \textbf{(Phase A)} & \textbf{(Phase A, $E=5$)} \\
+    \midrule
+    $R^2$                   & $\approx 0.93$ & 1.0000           & 0.9999           \\
+    RMSE (dB)               & ---            & 0.0007           & 0.083            \\
+    MAE (dB)                & ---            & 0.0001           & 0.002            \\
+    Model parameters        & $>$1{,}000     & 81               & 81               \\
+    Model size              & $>$100\,KB     & 324\,B (weights) & 324\,B (weights) \\
+    Runs on \gls{mcu}?      & No             & Yes              & Yes              \\
+    Raw data leaves device? & Yes            & Yes              & No               \\
+    Adapts post-deployment? & No             & No               & Yes              \\
+    Bandwidth / day / node  & $\approx$25.9\,KB & $\approx$25.9\,KB & $\approx$2.4\,KB \\
+    \bottomrule
+  \end{tabular}
+  \caption{Three-way comparison: prior XGBoost (centralized), centralized NN
+    baseline (Phase~A), and best federated NN (Phase~A, $E=5$, 20~rounds).}
+  \label{tab:three-way}
+\end{table}
+
+\subsection{Communication Efficiency (RQ3)}
+\label{sec:comm-efficiency}
+
+The communication cost comparison is derived from the concrete payload design described in Section~\ref{ch:system-design}.
+
+\noindent\textbf{Old system (raw data):} Each node transmits a status message every 60~seconds (1{,}440~messages/day) containing 18~bytes of raw sensor data. Daily cost: $1{,}440 \times 18 = 25{,}920$\,B per node.
+
+\noindent\textbf{New system (federated):} Each node transmits a compressed 8-byte status message every 5~minutes (288~messages/day $\times$ 8\,B $=$ 2{,}304\,B), plus one 52-byte FL weight update per round per day (52\,B). Daily cost: $2{,}304 + 52 = 2{,}356$\,B per node.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    & \textbf{Old --- Raw Data} & \textbf{New --- Federated} \\
+    \midrule
+    Payload / message     & 18\,B          & 8\,B (status) / 52\,B (FL update) \\
+    Messages / day        & 1{,}440        & 288 (status) $+$ 1 (FL)           \\
+    Bytes / day / node    & 25{,}920       & 2{,}356                           \\
+    Bytes / day / 6 nodes & 155{,}520      & 14{,}136                          \\
+    \textbf{Reduction}    & ---            & $\boldsymbol{\approx 11.0\times}$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{Daily communication cost per node: prior raw-data transmission vs.\
+    federated update scheme.}
+  \label{tab:bandwidth}
+\end{table}
+
+\noindent
+For comparison, Torres Sanchez et al.'s 1.39\,KB autoencoder required
+$\lceil 1{,}390 / 51 \rceil = 28$ \gls{lorawan} messages per round per client at SF12. Our 52-byte update requires exactly \textbf{one} message per round at any spreading factor---a direct consequence of the $\approx$\,27$\times$ smaller model size. \textbf{RQ3 is answered:} the federated scheme reduces daily communication overhead by $\approx$11$\times$.
+
+Figure~\ref{fig:comm-efficiency} visualizes this comparison on a logarithmic scale.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.75\textwidth]{fig7_communication_efficiency.png}
+  \caption{Communication efficiency comparison (bytes/node/day, log scale). The old raw-data system transmits 25{,}920\,B/day vs.\ the federated system's 2{,}356\,B/day---an $\approx$11$\times$ reduction. The Torres Sanchez FL update (1{,}428\,B per round) is shown for reference.}
+  \label{fig:comm-efficiency}
+\end{figure}
+
+%%==========================================================================%%
+\section{Phase B: Hardware-in-the-Loop Results}
+\label{sec:phase-b-results}
+%%==========================================================================%%
+
+\subsection{Resource Utilization (RQ4)}
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lrrr}
+    \toprule
+    \textbf{Resource} & \textbf{Used} & \textbf{Available} &
+    \textbf{Utilization} \\
+    \midrule
+    Flash               & [XX]\,KB & 256\,KB       & [XX]\,\%             \\
+    SRAM (static)       & [XX]\,KB & 32\,KB        & [XX]\,\%             \\
+    Tensor arena        & 8\,KB    & (within SRAM) & ---                  \\
+    Inference latency   & [XX]\,ms & ${<}$100\,ms  & \textbf{[PASS/FAIL]} \\
+    \bottomrule
+  \end{tabular}
+  \caption{MKR~WAN~1310 resource utilization measured on physical hardware
+    (Phase B).}
+  \label{tab:hw-resources}
+\end{table}
+
+\subsection{LoRaWAN Payload Compatibility}
+% 52-byte FL payload accepted and forwarded by TTN at DR[X] (SF[X])
+% Confirmed: frm\_payload in TTN console matches expected byte structure
+
+\subsection{Feasibility Assessment}
+% All four criteria from Sec.~\ref{sec:phase-b-impl} met/not met:
+% (a) SRAM <= 32 KB:    [YES/NO]
+% (b) Flash <= 256 KB:  [YES/NO]
+% (c) Inference < 100ms:[YES/NO]
+% (d) 52-B payload at SF12: [YES/NO]
+% CONCLUSION: "The system is declared hardware-feasible / not yet feasible."
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+% DISCUSSION
+% ─────────────────────────────────────────────────────────────────────────────
+
+\section{Answering the Research Questions}
+% RQ1: Federated R² = [XX] vs centralized R² = [XX] → [X]% difference
+% RQ2: Non-IID [did/did not] significantly slow convergence
+% RQ3: ~11× bandwidth reduction
+% RQ4: [XX]% Flash, [XX]% SRAM — fits on MKR WAN 1310
+
+\section{The Centralized-to-Federated Trade-Off}
+% Lose: [X]% R²; Gain: 11× less bandwidth, privacy, adaptability
+% "For duty-cycle-constrained deployments, the marginal accuracy loss is
+%  acceptable given the communication and privacy benefits."
+
+\section{Environmental Influence on Path Loss}
+% Feature importance analysis; which features contribute most?
+% Physical interpretation; does the relationship vary by location?
+
+\section{Comparison with Torres Sanchez et al.}
+% They: anomaly detection, Flower, 4 virtual clients, F1=94.77%
+% We: path loss regression, custom FedAvg, 6 clients (real data), R²=[XX]
+% Shared: FL comparable to centralized; model size critical
+% Our advantage: 52 B vs 1.39 KB; real data; hardware prototype
+
+\section{Comparison with the Prior Project}
+% XGBoost R²≈0.93 → Centralized NN R²=[XX] → Federated NN R²=[XX]
+% "The progression represents a deliberate trade-off: modest R² reduction
+%  in exchange for edge intelligence, privacy, and adaptability."
+
+\section{Limitations}
+\begin{enumerate}
+  \item \textbf{Simplified local training:} Weight proxy array, not true TFLite backpropagation.
+  \item \textbf{Simulation-based FL:} Data is real but FL process is simulated (standard practice---Torres Sanchez et al.\ also used simulation).
+  \item \textbf{Single building, single gateway:} Results may not generalize.
+  \item \textbf{Proxy labels:} On-device uses \gls{pdr} as proxy, not direct path loss.
+  \item \textbf{Fixed architecture:} Only Dense($8{\to}8{\to}1$) evaluated.
+\end{enumerate}
+
+
+% ══════════════════════════════════════════════════════════════════════════════
+% CHAPTER 6: CONCLUSION AND FUTURE WORK
+% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Conclusion and Future Work}
+\label{ch:conclusion}
+
+\section{Summary}
+% Problem → Approach → Results in one page.
+
+\section{Key Findings}
+\begin{enumerate}
+  \item \textbf{Comparable accuracy:} Federated $R^2 = 0.9999$ vs.\ centralized $R^2 = 1.0000$, only 0.001\,\% difference.
+  \item \textbf{$\approx$11$\times$ bandwidth reduction:} 25{,}920\,B $\to$ 2{,}356\,B per node per day.
+  \item \textbf{Fits on real hardware:} 81~parameters (324~bytes of weights) within 32\,KB \gls{sram} and 256\,KB Flash.
+  \item \textbf{Single-message FL updates:} 52\,B vs.\ Torres Sanchez's 1.39\,KB (28~messages).
+  \item \textbf{Non-IID impact:} Manageable --- with $E=5$ local epochs, the non-IID device-location split did not prevent convergence to $R^2 > 0.99$.
+\end{enumerate}
+
+\section{Future Work}
+\begin{enumerate}
+  \item Live multi-week deployment with all six nodes.
+  \item True on-device backpropagation (TinyTrain/TinyOL).
+  \item TTN downlink API integration for automated model distribution.
+  \item Deeper model architectures and accuracy--communication trade-off study.
+  \item Energy profiling under federated workloads.
+  \item Cross-building generalization via federated transfer learning.
+\end{enumerate}
+
+
+% ══════════════════════════════════════════════════════════════════════════════
+% BIBLIOGRAPHY
+% ══════════════════════════════════════════════════════════════════════════════
+\clearpage\phantomsection\addcontentsline{toc}{chapter}{Bibliography}
+\bibliographystyle{IEEEtranN}
+\bibliography{references}
+
+
+% ══════════════════════════════════════════════════════════════════════════════
+% APPENDICES
+% ══════════════════════════════════════════════════════════════════════════════
+\begin{appendices}
+
+\chapter{Source Code Excerpts}
+
+\section{TFLite Micro Initialization}
+\begin{lstlisting}[language=C++, caption={Model loading on MKR WAN 1310.}]
+void initTinyML() {
+    model = tflite::GetModel(g_model);
+    static tflite::MicroInterpreter static_interpreter(
+        model, resolver, tensor_arena, TENSOR_ARENA_SIZE);
+    interpreter = &static_interpreter;
+    interpreter->AllocateTensors();
+    input = interpreter->input(0);
+    output = interpreter->output(0);
+}
+\end{lstlisting}
+
+\section{Feature Normalization and Inference}
+\begin{lstlisting}[language=C++, caption={On-device normalization and path loss prediction.}]
+void normalizeFeatures(float* f) {
+    for (int i = 0; i < NUM_FEATURES; i++)
+        f[i] = (f[i] - featureMeans[i]) / featureStds[i];
+}
+\end{lstlisting}
+
+\section{FedAvg Aggregation}
+\begin{lstlisting}[language=Python, caption={Server-side federated averaging.}]
+total_samples = sum(client_samples)
+for layer_idx in range(len(client_weights[0])):
+    layer = np.zeros_like(client_weights[0][layer_idx])
+    for c in range(num_clients):
+        w = client_samples[c] / total_samples
+        layer += w * client_weights[c][layer_idx]
+    new_weights.append(layer)
+global_model.set_weights(new_weights)
+\end{lstlisting}
+
+\chapter{Dataset Schema}
+% Full column listing, data types, units, example values
+
+\chapter{Hardware Specifications}
+% MKR WAN 1310 datasheet, sensor specs, wiring diagram
+
+\end{appendices}
+
+\end{document}

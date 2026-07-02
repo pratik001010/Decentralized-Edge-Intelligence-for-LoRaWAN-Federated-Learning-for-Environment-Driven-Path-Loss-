@@ -1,0 +1,80 @@
+{
+  "simulation_meta": {
+    "timestamp": "2026-06-29T17:45:47",
+    "tensorflow": "2.21.0",
+    "fl_rounds": 20,
+    "local_epochs_tested": [
+      1,
+      3,
+      5
+    ],
+    "architecture": "Dense(9\u21928\u21921)",
+    "n_params": 89
+  },
+  "data_summary": {
+    "raw_rows": 2079534,
+    "anomalies_removed": 0,
+    "null_dropped": 0,
+    "final_rows": 2079528,
+    "client_sample_counts": {
+      "ED0": 277531,
+      "ED1": 274660,
+      "ED2": 278728,
+      "ED3": 272897,
+      "ED4": 275528,
+      "ED5": 284278
+    }
+  },
+  "client_sample_counts": {
+    "ED0": 277531,
+    "ED1": 274660,
+    "ED2": 278728,
+    "ED3": 272897,
+    "ED4": 275528,
+    "ED5": 284278
+  },
+  "reference_values": {
+    "supervisor_LDPLSM_MW_EP_R2": 0.8219,
+    "supervisor_LDPLSM_MW_EP_RMSE": 8.04,
+    "pep_xgboost_R2": 0.93,
+    "torres_sanchez_F1": 0.9477
+  },
+  "centralized_baseline": {
+    "r2": 0.89283686876297,
+    "rmse": 6.176243879928599,
+    "mae": 4.349266529083252
+  },
+  "federated_results": {
+    "1": {
+      "final_r2": -0.6868704557418823,
+      "final_rmse": 24.504319413562072,
+      "final_mae": 19.753211975097656,
+      "r2_relative_to_centralized": -0.7693123791959273
+    },
+    "3": {
+      "final_r2": 0.610893726348877,
+      "final_rmse": 11.76890050272194,
+      "final_mae": 9.506182670593262,
+      "r2_relative_to_centralized": 0.6842165100050956
+    },
+    "5": {
+      "final_r2": 0.6681883335113525,
+      "final_rmse": 10.867949908104938,
+      "final_mae": 8.740739822387695,
+      "r2_relative_to_centralized": 0.7483879271665057
+    }
+  },
+  "best_fl_config": {
+    "local_epochs": 5,
+    "final_r2": 0.6681883335113525,
+    "final_rmse": 10.867949908104938,
+    "r2_drop_vs_centralized_pct": 25.161207283349434
+  },
+  "communication_efficiency": {
+    "old_bytes_per_node_per_day": 25920,
+    "new_bytes_per_node_per_day": 2356,
+    "reduction_factor": 11.00169779286927,
+    "torres_sanchez_bytes_per_round": 1428,
+    "our_fl_bytes_per_round": 52
+  }
+}

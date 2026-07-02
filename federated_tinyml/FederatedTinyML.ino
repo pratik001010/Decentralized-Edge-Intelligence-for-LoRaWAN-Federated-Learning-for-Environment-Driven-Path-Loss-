@@ -44,7 +44,7 @@
 
 // TinyML configuration
 #define TENSOR_ARENA_SIZE     8192      // 8KB tensor arena
-#define NUM_FEATURES          5         // pressure, co2, temp, humidity, pm25
+#define NUM_FEATURES          8         // pressure, co2, temp, humidity, pm25, rssi, snr, sf
 #define NUM_CLASSES           3         // good, degraded, poor
 #define MODEL_WEIGHTS_SIZE    128       // Approximate model weight count
 
@@ -99,7 +99,7 @@ tflite::AllOpsResolver resolver;
 
 // Sample structure for circular buffer
 struct Sample {
-    float features[NUM_FEATURES];  // [pressure, co2, temp, humidity, pm25]
+    float features[NUM_FEATURES];  // [pressure, co2, temp, humidity, pm25, rssi, snr, sf]
     uint8_t label;                 // Link state label (proxy label)
     bool valid;                    // Is this sample valid?
 };
@@ -131,9 +131,10 @@ float pdr = 1.0;  // Packet Delivery Ratio
 // NORMALIZATION PARAMETERS (from training dataset)
 // ============================================================================
 
-// Synced with the latest train_model.py export output.
-const float featureMeans[NUM_FEATURES] = {1009.2605, 542.0334, 21.9533, 36.1344, 1.8987};
-const float featureStds[NUM_FEATURES] = {30.9770, 132.9057, 2.9012, 6.6737, 2.3336};
+// Will be synced with the final export from the 8-feature dataset.
+// Currently initialized to zeros; you must overwrite these from train_model.py output.
+float featureMeans[NUM_FEATURES] = {0,0,0,0,0,0,0,0};
+float featureStds[NUM_FEATURES] = {1,1,1,1,1,1,1,1};
 
 // ============================================================================
 // FUNCTION DECLARATIONS
@@ -202,6 +203,15 @@ void loop() {
     Serial.print("Temperature: "); Serial.print(features[2]); Serial.println(" °C");
     Serial.print("Humidity: "); Serial.print(features[3]); Serial.println(" %");
     Serial.print("PM2.5: "); Serial.print(features[4]); Serial.println(" µg/m³");
+    
+    // Add LoRa parameters to feature array
+    features[5] = (float) modem.getRSSI();
+    features[6] = (float) modem.getSNR();
+    features[7] = (float) currentDR; // Simple proxy for SF
+    
+    Serial.print("RSSI: "); Serial.print(features[5]); Serial.println(" dBm");
+    Serial.print("SNR: "); Serial.print(features[6]); Serial.println(" dB");
+    Serial.print("SF (DR): "); Serial.println(features[7]);
     
     // -------------------------------------------------------------------------
     // STEP 2: Normalize features for inference

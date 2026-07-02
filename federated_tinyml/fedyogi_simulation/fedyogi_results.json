@@ -1,0 +1,75 @@
+{
+  "simulation_meta": {
+    "algorithm": "FedYogi",
+    "timestamp": "2026-07-01T15:50:11",
+    "tensorflow": "2.21.0",
+    "fl_rounds": 20,
+    "local_epochs_tested": [
+      1,
+      3,
+      5
+    ],
+    "architecture": "Dense(9\u21928\u21921)",
+    "n_params": 89
+  },
+  "data_summary": {
+    "raw_rows": 2079534,
+    "anomalies_removed": 0,
+    "null_dropped": 0,
+    "final_rows": 2079528,
+    "client_sample_counts": {
+      "ED0": 277531,
+      "ED1": 274660,
+      "ED2": 278728,
+      "ED3": 272897,
+      "ED4": 275528,
+      "ED5": 284278
+    }
+  },
+  "client_sample_counts": {
+    "ED0": 277531,
+    "ED1": 274660,
+    "ED2": 278728,
+    "ED3": 272897,
+    "ED4": 275528,
+    "ED5": 284278
+  },
+  "centralized_baseline": {
+    "r2": 0.9211269617080688,
+    "rmse": 5.298660202543338,
+    "mae": 3.9452576637268066
+  },
+  "federated_results": {
+    "1": {
+      "final_r2": -2.5206239223480225,
+      "final_rmse": 35.400679794077575,
+      "final_mae": 28.485063552856445,
+      "r2_relative_to_centralized": -2.73645656585056
+    },
+    "3": {
+      "final_r2": -3.022815227508545,
+      "final_rmse": 37.84136778990603,
+      "final_mae": 28.121753692626953,
+      "r2_relative_to_centralized": -3.2816488423086247
+    },
+    "5": {
+      "final_r2": -2.9143073558807373,
+      "final_rmse": 37.327528184324805,
+      "final_mae": 27.453527450561523,
+      "r2_relative_to_centralized": -3.163849802503516
+    }
+  },
+  "best_fl_config": {
+    "local_epochs": 1,
+    "final_r2": -2.5206239223480225,
+    "final_rmse": 35.400679794077575,
+    "r2_drop_vs_centralized_pct": 373.64565658505603
+  },
+  "communication_efficiency": {
+    "old_bytes_per_node_per_day": 25920,
+    "new_bytes_per_node_per_day": 2356,
+    "reduction_factor": 11.00169779286927,
+    "torres_sanchez_bytes_per_round": 1428,
+    "our_fl_bytes_per_round": 52
+  }
+}

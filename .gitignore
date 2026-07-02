@@ -1,0 +1,10 @@
+# Ignore large datasets and documents
+*.csv
+*.pdf
+*.pptx
+*.docx
+*.tmp
+~$*
+__pycache__/
+*.pyc
+.vscode/

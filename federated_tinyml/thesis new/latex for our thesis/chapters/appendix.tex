@@ -1,0 +1,43 @@
+\chapter{Source Code Excerpts}
+
+\section{TFLite Micro Initialization}
+\begin{lstlisting}[language=C++, caption={Model loading on MKR WAN 1310.}]
+void initTinyML() {
+    model = tflite::GetModel(g_model);
+    static tflite::MicroInterpreter static_interpreter(
+        model, resolver, tensor_arena, TENSOR_ARENA_SIZE);
+    interpreter = &static_interpreter;
+    interpreter->AllocateTensors();
+    input = interpreter->input(0);
+    output = interpreter->output(0);
+}
+\end{lstlisting}
+
+\section{Feature Normalization and Inference}
+\begin{lstlisting}[language=C++, caption={On-device normalization and path loss prediction.}]
+void normalizeFeatures(float* f) {
+    for (int i = 0; i < NUM_FEATURES; i++)
+        f[i] = (f[i] - featureMeans[i]) / featureStds[i];
+}
+\end{lstlisting}
+
+\section{FedAvg Aggregation}
+\begin{lstlisting}[language=Python, caption={Server-side federated averaging.}]
+total_samples = sum(client_samples)
+for layer_idx in range(len(client_weights[0])):
+    layer = np.zeros_like(client_weights[0][layer_idx])
+    for c in range(num_clients):
+        w = client_samples[c] / total_samples
+        layer += w * client_weights[c][layer_idx]
+    new_weights.append(layer)
+global_model.set_weights(new_weights)
+\end{lstlisting}
+
+\chapter{Dataset Schema}
+% Full column listing, data types, units, example values
+
+\chapter{Hardware Specifications}
+% MKR WAN 1310 datasheet, sensor specs, wiring diagram
+
+% End of Appendix
+

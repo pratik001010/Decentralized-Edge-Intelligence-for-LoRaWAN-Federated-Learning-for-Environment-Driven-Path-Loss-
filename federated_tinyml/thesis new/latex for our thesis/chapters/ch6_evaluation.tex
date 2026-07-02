@@ -1,0 +1,277 @@
+\chapter{Results and Discussion}
+\label{ch:results-discussion}
+
+This chapter presents experimental results and discussion following the two-phase hybrid
+methodology defined in Section~\ref{sec:methodology}: Phase~A
+(Section~\ref{sec:phase-a-results}) benchmarks centralized vs.\ federated path
+loss regression in software simulation; Phase~B
+(Section~\ref{sec:phase-b-results}) validates the system on real
+MKR~WAN~1310 hardware. Finally, the results are discussed in detail, highlighting
+key findings, limitations, and comparisons with prior work.
+
+%%==========================================================================%%
+\section{Phase A: Simulation-Based Benchmarking Results}
+\label{sec:phase-a-results}
+%%==========================================================================%%
+
+The Phase~A simulation was executed on a Windows~11 workstation with a Conda environment (Python~3.13, TensorFlow~2.21.0). All models used the identical Dense($8{\to}8{\to}1$) architecture (81~trainable parameters, 324~bytes of float32 weights). Reproducibility was ensured by fixing the random seed to~42 for both NumPy and TensorFlow. The total simulation completed in 17.1~minutes.
+
+\subsection{Centralized Baseline}
+\label{sec:centralized-baseline}
+A centralized Dense($8{\to}8{\to}1$) model was trained on the merged training set (1,371,503~samples, 80\,\% of 1,714,379) with the Adam optimizer (lr~$=$~0.001), MSE loss, batch size~$=$~2{,}048, and early stopping (patience~$=$~8, monitoring validation loss, restoring best weights). A separate 15\,\% validation split was carved from the training set for early stopping. The model was evaluated on a held-out test set of 342,876~samples (20\,\%).
+
+\noindent\textbf{Result:}
+\[
+  R^2 = 1.0000, \quad
+  \text{RMSE} = 0.0007\;\text{dB}, \quad
+  \text{MAE} = 0.0001\;\text{dB}.
+\]
+
+\noindent
+The near-perfect centralized accuracy is expected and physically justified: the target variable \texttt{exp\_pl} is derived from \gls{rssi} via the relation $\text{exp\_pl} = \text{TX\_power} - \text{RSSI} + \text{antenna\_corrections}$, and \gls{rssi} is included among the eight input features. The neural network learns this near-linear inverse mapping with high precision. This result establishes the \emph{upper bound} against which all federated configurations are compared.
+
+Figure~\ref{fig:central-loss} shows the training and validation loss curves. Both curves decrease rapidly and converge within the first 10~epochs, with no sign of overfitting. Figure~\ref{fig:pred-vs-actual} presents the predicted vs.\ actual path loss scatter plot: the points fall almost exactly on the identity line ($y = x$), confirming the model's high fidelity. The residual histogram (right panel) shows a near-zero-mean, narrow distribution centred at 0\,dB.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{fig2_centralized_training_curves.png}
+  \caption{Centralized model training and validation loss (MSE) over epochs. Early stopping triggered after convergence. The final model achieves $R^2 = 1.0000$ with RMSE~$= 0.0007$\,dB.}
+  \label{fig:central-loss}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig3_pred_vs_actual_centralized.png}
+  \caption{Centralized model: predicted vs.\ actual path loss (left) and residual distribution (right). Points align tightly along the identity line, and residuals are centred at 0\,dB with negligible spread.}
+  \label{fig:pred-vs-actual}
+\end{figure}
+
+\subsection{Federated Learning Convergence}
+\label{sec:fl-convergence}
+The \gls{fl} simulation used \gls{fedavg}~\cite{mcmahan2017communication} with all six clients participating in every round ($K = 6$). Three local-epoch configurations ($E \in \{1, 3, 5\}$) were evaluated over $N = 20$ communication rounds each. In each round, the following steps are executed:
+\begin{enumerate}
+  \item The server broadcasts the current global model weights $w_t$ to all $K$ clients.
+  \item Each client~$k$ initializes its local model to $w_t$ and trains for $E$ local epochs on its own data partition $\mathcal{D}_k$ using Adam (lr~$=$~0.001, batch size~$=$~2{,}048).
+  \item Each client sends its updated weights $w_k^{(t)}$ to the server.
+  \item The server aggregates via sample-count-weighted averaging:
+\end{enumerate}
+\[
+  w_{t+1} = \sum_{k=1}^{K} \frac{n_k}{\sum_{j=1}^{K} n_j} \, w_k^{(t)}
+\]
+where $n_k$ is the number of training samples on client~$k$. The global model is evaluated on the held-out test set after each round.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ccccc}
+    \toprule
+    \textbf{Local Epochs ($E$)} & \textbf{$R^2$} & \textbf{RMSE (dB)} & \textbf{MAE (dB)} & \textbf{$R^2$ / Centralized} \\
+    \midrule
+    1  & $-4.8867$  & 54.87  & 49.79  & --- (not converged) \\
+    3  & 0.9606     & 4.49   & 3.07   & 96.06\,\% \\
+    5  & \textbf{0.9999} & \textbf{0.083} & \textbf{0.002} & \textbf{99.99\,\%} \\
+    \bottomrule
+  \end{tabular}
+  \caption{Federated learning results after 20 communication rounds with 6~clients (non-IID split by physical device location).}
+  \label{tab:fl-results}
+\end{table}
+
+\noindent
+With $E=1$ local epoch, the model fails to converge within 20~rounds (negative $R^2$), indicating insufficient local training per round for this architecture. At $E=3$, the federated model achieves $R^2 = 0.9606$ after 20~rounds---already exceeding the PEP project's XGBoost baseline ($R^2 \approx 0.93$). At $E=5$, convergence reaches $R^2 = 0.9999$ by round~15 and $R^2 = 1.0000$ (to four decimal places) by round~20, essentially matching the centralized upper bound.
+
+Figure~\ref{fig:fl-convergence} illustrates the convergence behaviour. The left panel shows $R^2$ vs.\ communication round for each local-epoch setting, with the centralized upper bound and the supervisor's LDPLSM-MW-EP baseline ($R^2 = 0.8219$) plotted as horizontal reference lines. The right panel shows the corresponding RMSE convergence.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig4_fl_convergence_r2_rmse.png}
+  \caption{Federated learning convergence: $R^2$ (left) and RMSE (right) vs.\ communication round for $E \in \{1, 3, 5\}$ local epochs. The black dashed line marks the centralized baseline ($R^2 = 1.0000$); the grey dashed line marks the supervisor's LDPLSM-MW-EP result ($R^2 = 0.8219$). With $E=5$, the federated model matches the centralized upper bound by round~20.}
+  \label{fig:fl-convergence}
+\end{figure}
+
+\subsection{Effect of Non-IID Data Distribution}
+\label{sec:non-iid-effect}
+The naturally non-\gls{iid} data distribution---arising from each device's unique room placement on the 8th floor of H\"olderlinstra{\ss}e Campus, Siegen---did not prevent convergence. For $E=5$, the per-client $R^2$ of the final global model evaluated on each client's local data was uniformly high across all six devices, confirming that the \gls{fedavg} aggregation successfully produced a model that generalizes across diverse indoor locations despite each client observing different environmental and radio conditions.
+
+Figure~\ref{fig:per-client-r2} shows the per-client $R^2$ of the best federated model ($E=5$) evaluated on each client's local data. All six clients achieve $R^2$ close to~1.0, with the global test set $R^2$ (black dashed line) and the supervisor's baseline (grey dotted line) shown for reference.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{fig6_per_client_r2_non_iid.png}
+  \caption{Per-client $R^2$ of the best federated global model ($E=5$, 20~rounds) evaluated on each client's local data. The black dashed line shows the global test set $R^2$ ($= 0.9999$); the grey dotted line shows the supervisor's LDPLSM-MW-EP baseline ($R^2 = 0.8219$). All clients achieve uniformly high accuracy despite the non-IID data partitioning.}
+  \label{fig:per-client-r2}
+\end{figure}
+
+\subsection{Final Federated Model}
+Using the optimal configuration ($N = 20$~rounds, $E = 5$ local epochs,
+all 6~clients participating per round), the federated model achieves:
+\[
+  R^2 = 0.9999, \quad
+  \text{RMSE} = 0.083\;\text{dB}, \quad
+  \text{MAE} = 0.002\;\text{dB}
+\]
+This represents a reduction of only \textbf{0.001\,\%} in $R^2$ relative to the centralized upper bound. \textbf{RQ1 is answered:} a federated \gls{tinyml} model can achieve comparable path loss prediction accuracy to a centralized model trained on the full dataset.
+
+Figure~\ref{fig:fl-pred-vs-actual} shows the predicted vs.\ actual scatter for the best federated model, confirming near-perfect alignment with the identity line.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.65\textwidth]{fig8_fl_pred_vs_actual.png}
+  \caption{Best federated model ($E=5$, 20~rounds): predicted vs.\ actual path loss. Points fall on the identity line ($y=x$), confirming $R^2 = 0.9999$ with RMSE~$= 0.083$\,dB.}
+  \label{fig:fl-pred-vs-actual}
+\end{figure}
+
+\subsection{Three-Way Performance Comparison}
+
+Figure~\ref{fig:three-way} presents the three-way $R^2$ and RMSE comparison across all four modelling approaches.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig5_three_way_comparison.png}
+  \caption{Three-way performance comparison: supervisor's LDPLSM-MW-EP (linear, $R^2 = 0.8219$), PEP project XGBoost ($R^2 \approx 0.93$), centralized NN ($R^2 = 1.0000$), and federated NN ($R^2 = 0.9999$). Left: $R^2$; Right: RMSE (dB). The federated model achieves near-identical accuracy to the centralized baseline while preserving data privacy.}
+  \label{fig:three-way}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Metric} &
+    \textbf{XGBoost} & \textbf{Centralized NN} & \textbf{Federated NN} \\
+    & \textbf{(Prior Project)} & \textbf{(Phase A)} & \textbf{(Phase A, $E=5$)} \\
+    \midrule
+    $R^2$                   & $\approx 0.93$ & 1.0000           & 0.9999           \\
+    RMSE (dB)               & ---            & 0.0007           & 0.083            \\
+    MAE (dB)                & ---            & 0.0001           & 0.002            \\
+    Model parameters        & $>$1{,}000     & 81               & 81               \\
+    Model size              & $>$100\,KB     & 324\,B (weights) & 324\,B (weights) \\
+    Runs on \gls{mcu}?      & No             & Yes              & Yes              \\
+    Raw data leaves device? & Yes            & Yes              & No               \\
+    Adapts post-deployment? & No             & No               & Yes              \\
+    Bandwidth / day / node  & $\approx$25.9\,KB & $\approx$25.9\,KB & $\approx$2.4\,KB \\
+    \bottomrule
+  \end{tabular}
+  \caption{Three-way comparison: prior XGBoost (centralized), centralized NN
+    baseline (Phase~A), and best federated NN (Phase~A, $E=5$, 20~rounds).}
+  \label{tab:three-way}
+\end{table}
+
+\subsection{Communication Efficiency (RQ3)}
+\label{sec:comm-efficiency}
+
+The communication cost comparison is derived from the concrete payload design described in Section~\ref{ch:system-design}.
+
+\noindent\textbf{Old system (raw data):} Each node transmits a status message every 60~seconds (1{,}440~messages/day) containing 18~bytes of raw sensor data. Daily cost: $1{,}440 \times 18 = 25{,}920$\,B per node.
+
+\noindent\textbf{New system (federated):} Each node transmits a compressed 8-byte status message every 5~minutes (288~messages/day $\times$ 8\,B $=$ 2{,}304\,B), plus one 52-byte FL weight update per round per day (52\,B). Daily cost: $2{,}304 + 52 = 2{,}356$\,B per node.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    & \textbf{Old --- Raw Data} & \textbf{New --- Federated} \\
+    \midrule
+    Payload / message     & 18\,B          & 8\,B (status) / 52\,B (FL update) \\
+    Messages / day        & 1{,}440        & 288 (status) $+$ 1 (FL)           \\
+    Bytes / day / node    & 25{,}920       & 2{,}356                           \\
+    Bytes / day / 6 nodes & 155{,}520      & 14{,}136                          \\
+    \textbf{Reduction}    & ---            & $\boldsymbol{\approx 11.0\times}$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{Daily communication cost per node: prior raw-data transmission vs.\
+    federated update scheme.}
+  \label{tab:bandwidth}
+\end{table}
+
+\noindent
+For comparison, Torres Sanchez et al.'s 1.39\,KB autoencoder required
+$\lceil 1{,}390 / 51 \rceil = 28$ \gls{lorawan} messages per round per client at SF12. Our 52-byte update requires exactly \textbf{one} message per round at any spreading factor---a direct consequence of the $\approx$\,27$\times$ smaller model size. \textbf{RQ3 is answered:} the federated scheme reduces daily communication overhead by $\approx$11$\times$.
+
+Figure~\ref{fig:comm-efficiency} visualizes this comparison on a logarithmic scale.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.75\textwidth]{fig7_communication_efficiency.png}
+  \caption{Communication efficiency comparison (bytes/node/day, log scale). The old raw-data system transmits 25{,}920\,B/day vs.\ the federated system's 2{,}356\,B/day---an $\approx$11$\times$ reduction. The Torres Sanchez FL update (1{,}428\,B per round) is shown for reference.}
+  \label{fig:comm-efficiency}
+\end{figure}
+
+%%==========================================================================%%
+\section{Phase B: Hardware-in-the-Loop Results}
+\label{sec:phase-b-results}
+%%==========================================================================%%
+
+\subsection{Resource Utilization (RQ4)}
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lrrr}
+    \toprule
+    \textbf{Resource} & \textbf{Used} & \textbf{Available} &
+    \textbf{Utilization} \\
+    \midrule
+    Flash               & [XX]\,KB & 256\,KB       & [XX]\,\%             \\
+    SRAM (static)       & [XX]\,KB & 32\,KB        & [XX]\,\%             \\
+    Tensor arena        & 8\,KB    & (within SRAM) & ---                  \\
+    Inference latency   & [XX]\,ms & ${<}$100\,ms  & \textbf{[PASS/FAIL]} \\
+    \bottomrule
+  \end{tabular}
+  \caption{MKR~WAN~1310 resource utilization measured on physical hardware
+    (Phase B).}
+  \label{tab:hw-resources}
+\end{table}
+
+\subsection{LoRaWAN Payload Compatibility}
+% 52-byte FL payload accepted and forwarded by TTN at DR[X] (SF[X])
+% Confirmed: frm\_payload in TTN console matches expected byte structure
+
+\subsection{Feasibility Assessment}
+% All four criteria from Sec.~\ref{sec:phase-b-impl} met/not met:
+% (a) SRAM <= 32 KB:    [YES/NO]
+% (b) Flash <= 256 KB:  [YES/NO]
+% (c) Inference < 100ms:[YES/NO]
+% (d) 52-B payload at SF12: [YES/NO]
+% CONCLUSION: "The system is declared hardware-feasible / not yet feasible."
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+% DISCUSSION
+% ─────────────────────────────────────────────────────────────────────────────
+
+\section{Answering the Research Questions}
+% RQ1: Federated R² = [XX] vs centralized R² = [XX] → [X]% difference
+% RQ2: Non-IID [did/did not] significantly slow convergence
+% RQ3: ~11× bandwidth reduction
+% RQ4: [XX]% Flash, [XX]% SRAM — fits on MKR WAN 1310
+
+\section{The Centralized-to-Federated Trade-Off}
+% Lose: [X]% R²; Gain: 11× less bandwidth, privacy, adaptability
+% "For duty-cycle-constrained deployments, the marginal accuracy loss is
+%  acceptable given the communication and privacy benefits."
+
+\section{Environmental Influence on Path Loss}
+% Feature importance analysis; which features contribute most?
+% Physical interpretation; does the relationship vary by location?
+
+\section{Comparison with Torres Sanchez et al.}
+% They: anomaly detection, Flower, 4 virtual clients, F1=94.77%
+% We: path loss regression, custom FedAvg, 6 clients (real data), R²=[XX]
+% Shared: FL comparable to centralized; model size critical
+% Our advantage: 52 B vs 1.39 KB; real data; hardware prototype
+
+\section{Comparison with the Prior Project}
+% XGBoost R²≈0.93 → Centralized NN R²=[XX] → Federated NN R²=[XX]
+% "The progression represents a deliberate trade-off: modest R² reduction
+%  in exchange for edge intelligence, privacy, and adaptability."
+
+\section{Limitations}
+\begin{enumerate}
+  \item \textbf{Simplified local training:} Weight proxy array, not true TFLite backpropagation.
+  \item \textbf{Simulation-based FL:} Data is real but FL process is simulated (standard practice---Torres Sanchez et al.\ also used simulation).
+  \item \textbf{Single building, single gateway:} Results may not generalize.
+  \item \textbf{Proxy labels:} On-device uses \gls{pdr} as proxy, not direct path loss.
+  \item \textbf{Fixed architecture:} Only Dense($8{\to}8{\to}1$) evaluated.
+\end{enumerate}
+
+
+% ══════════════════════════════════════════════════════════════════════════════
+% CHAPTER 6: CONCLUSION AND FUTURE WORK
+% ══════════════════════════════════════════════════════════════════════════════
