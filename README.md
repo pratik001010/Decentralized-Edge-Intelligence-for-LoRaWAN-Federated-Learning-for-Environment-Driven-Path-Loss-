@@ -2,9 +2,9 @@
 ### Federated Learning for Environment-Driven Path Loss and Link Quality Modeling
 
 
-Indoor LoRaWAN deployments are notoriously hard to model accurately : walls, humidity, and CO2 levels all distort signal propagation in ways static path-loss formulas can't capture. Centralized machine learning can learn these patterns, but it demands streaming raw sensor data to a server, which quickly collides with LoRaWAN's strict 1% duty-cycle limit, drains battery-powered nodes, and raises privacy concerns for occupancy-revealing environmental data.
+Indoor LoRaWAN deployments are notoriously hard to model accurately : walls, humidity, PM2.5, temp, Baro pressure, and CO2 levels all distort signal propagation in ways static path-loss formulas can't capture. Centralized machine learning can learn these patterns, but it demands streaming raw sensor data to a server, which quickly collides with LoRaWAN's strict 1% duty-cycle limit, drains battery-powered nodes, and raises privacy concerns for occupancy-revealing environmental data.
 
-This thesis asks whether a **federated, on-device approach** can close that gap: can a lightweight 89-parameter TinyML model, trained collaboratively across distributed end devices via FedAvg, match centralized accuracy without ever transmitting raw data? **The results say yes**. The federated model retains **96.9% of centralized accuracy (R²=0.8807 vs. 0.9089)** with RMSE increasing only slightly from **5.69 dB to 6.52 dB** (**+0.83 dB**, a modest tradeoff for the efficiency gains below), while cutting per-node data volume by **1.64x** and radio energy consumption by **11.36x**. A **hardware feasibility study further confirms** the approach runs comfortably on an **Arduino MKR WAN 1310**, fitting the full model update into a single LoRaWAN packet and staying well within duty-cycle and energy budgets.
+This research asks whether a **federated, on-device approach** can close that gap: can a lightweight 89-parameter TinyML model, trained collaboratively across distributed end devices via FedAvg, match centralized accuracy without ever transmitting raw data? **The results say yes**. The federated model retains **96.9% of centralized accuracy (R²=0.8807 vs. 0.9089)** with RMSE increasing only slightly from **5.69 dB to 6.52 dB** (**+0.83 dB**, a modest tradeoff for the efficiency gains below), while cutting per-node data volume by **1.64x** and radio energy consumption by **11.36x**. A **hardware feasibility study further confirms** the approach runs comfortably on an **Arduino MKR WAN 1310**, fitting the full model update into a single LoRaWAN packet and staying well within duty-cycle and energy budgets.
 
 The repository documents the full investigation : from a year-long multi-room data collection campaign, through the centralized-vs-federated benchmark, to the hardware feasibility analysis above.
 
@@ -12,7 +12,7 @@ The repository documents the full investigation : from a year-long multi-room da
 
 ## 1. Motivation: Why Decentralize?
 
-IoT device growth (18B → 29B by 2030) and LoRaWAN's 1% duty-cycle limit make raw telemetry streaming impractical; Federated Learning keeps raw data on-device and transmits only compact model weights.
+IoT device growth (18B → 29B by 2030) with TinyML growth (1.8B → 18.2B  by 2035) and LoRaWAN's 1% duty-cycle limit make raw telemetry streaming impractical; Federated Learning keeps raw data on-device and transmits only compact model weights.
 
 ![Why Decentralize](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/1.png)
 
