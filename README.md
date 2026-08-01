@@ -34,12 +34,6 @@ This thesis is positioned against prior work in indoor path-loss modeling, FL ov
 
 The core model is a compact Dense 9-8-1 MLP (89 trainable parameters) taking 9 normalized features as input and predicting path loss (dB) via one ReLU hidden layer and a linear output.
 
-![TinyML Architecture — full](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/5.png)
-
-![TinyML Architecture — equations](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/6.png)
-
-![TinyML Architecture — build step](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/7.png)
-
 ![TinyML Architecture — z1 formula](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/8.png)
 
 ## 6. Overall Methodology Workflow
@@ -63,18 +57,6 @@ Training and validation R² and RMSE curves converge closely with no overfitting
 ## 9. FedAvg Baseline: Implementation
 
 Six clients train locally (5 local epochs per round) and send weight updates to a server, which aggregates via FedAvg over 50 communication rounds; the ground-truth label is path loss derived from RSSI via the link-budget equation.
-
-![FedAvg Baseline — full](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/12.png)
-
-![FedAvg Baseline — variant](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/13.png)
-
-![FedAvg Baseline — build step 1](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/14.png)
-
-![FedAvg Baseline — build step 2](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/15.png)
-
-![FedAvg Baseline — build step 3](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/16.png)
-
-![FedAvg Baseline — build step 4](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/17.png)
 
 ![FedAvg Baseline — build step 4](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/18.png)
 
