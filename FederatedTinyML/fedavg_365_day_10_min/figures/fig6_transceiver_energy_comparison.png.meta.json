@@ -1,0 +1,6 @@
+{
+  "caption": "Fig. 6: Total Radio Energy Consumption per Node (SF7): Centralized vs Federated Learning",
+  "centralized_mJ": 6795.78,
+  "federated_mJ": 597.99,
+  "reduction_factor": 11.36
+}

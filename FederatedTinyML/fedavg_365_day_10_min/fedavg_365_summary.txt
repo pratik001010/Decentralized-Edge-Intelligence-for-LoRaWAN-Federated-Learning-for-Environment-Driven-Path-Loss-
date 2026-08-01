@@ -1,0 +1,59 @@
+================================================================================
+  FedAvg Simulation Summary — Thesis: Decentralized Edge Intelligence for LoRaWAN
+  Federated Learning for Environment-Driven Path Loss and Link Quality Modeling
+  Author: Pratik Khadka | University of Siegen
+================================================================================
+
+Generated      : 2026-07-23 02:19:24
+Execution Time : 35.3 minutes (2,118 seconds)
+Host CPU Config: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz (8 Cores, 16 Threads)
+TensorFlow     : 2.21.0
+Architecture   : Dense(9→8→1) — 89 trainable parameters
+FL Rounds      : 50 communication rounds
+Local Epochs   : [1, 3, 5]
+Dataset        : Indoor LoRaWAN, Hölderlinstraße Campus 8F, Siegen
+                 6 devices (ED0–ED5), TTN → MQTT → InfluxDB on AWS
+
+── DATA SUMMARY ────────────────────────────────────────────────────────────────
+  Raw rows            : 2,079,534
+  Anomalies removed   : 0
+  Null-dropped rows   : 0
+  Final usable rows   : 2,079,528
+  Train samples       : 1,663,622  (80%)
+  Test samples        : 415,905  (20%)
+
+── CLIENT DATA SPLIT (Non-IID, by device_id) ───────────────────────────────────
+  ED0: 277,531 training samples
+  ED1: 274,660 training samples
+  ED2: 278,728 training samples
+  ED3: 272,897 training samples
+  ED4: 275,528 training samples
+  ED5: 284,278 training samples
+
+── CENTRALIZED BASELINE (upper bound, same dataset) ────────────────────────────
+  R²   : 0.9071
+  RMSE : 5.7520 dB
+
+── FEDERATED LEARNING RESULTS (FedAvg, McMahan et al. 2017) ────────────────────
+  Local Epochs    Final R²     RMSE (dB)    R² / Central  
+  -------------------------------------------------------
+  E=1             0.7032       10.2781      0.7753        
+  E=3             0.8370       7.6174       0.9228        
+  E=5             0.8807       6.5153       0.9710        
+
+── BEST FL CONFIGURATION ───────────────────────────────────────────────────────
+  Local epochs  : E=5
+  Final R²      : 0.8807
+  Final RMSE    : 6.5153 dB
+  R² drop vs centralized : 2.90%
+
+── COMMUNICATION EFFICIENCY ────────────────────────────────────────────────────
+  Old (raw data upload)  : 25,920 B/day/node
+  New (federated update) : 2,356 B/day/node
+  Reduction factor       : 11.0×
+  Our FL payload/round   : 52 B  (89 int8 params fit in 1 LoRaWAN packet)
+
+── REFERENCE VALUES ────────────────────────────────────────────────────────────
+  Supervisor LDPLSM-MW-EP (Obiri & Van Laerhoven, 2024) : R²=0.8219  RMSE=8.04 dB
+
+================================================================================

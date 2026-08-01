@@ -1,0 +1,14 @@
+=== CENTRALIZED BASELINE SIMULATION SUMMARY (365-DAY 10-MIN DATASET) ===
+Total Rows: 206,957 (Train: 140,729, Val: 24,835, Test: 41,393)
+Training Time: 21.21 s over 50 Epochs
+Final Test R2 Score: 0.9089
+Final Test RMSE: 5.6872 dB
+
+Per-Device Performance Breakdown:
+Device  Test_Samples     R2  RMSE_dB
+   ED0          6903 0.8299   5.8554
+   ED1          6834 0.7559   7.2648
+   ED2          6948 0.6128   5.7329
+   ED3          6805 0.8098   5.7508
+   ED4          6837 0.5813   4.2224
+   ED5          7066 0.0884   4.8495

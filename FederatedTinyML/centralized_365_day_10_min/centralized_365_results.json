@@ -1,0 +1,53 @@
+{
+    "dataset": "365_days_staggered_10min_sampled.csv",
+    "raw_rows": 206957,
+    "anomalies_removed": 0,
+    "clean_rows": 206957,
+    "train_samples": 140729,
+    "val_samples": 24835,
+    "test_samples": 41393,
+    "training_time_seconds": 21.21,
+    "epochs": 50,
+    "learning_rate": 0.01,
+    "batch_size": 512,
+    "final_test_r2": 0.9089,
+    "final_test_rmse_db": 5.6872,
+    "per_device": [
+        {
+            "Device": "ED0",
+            "Test_Samples": 6903,
+            "R2": 0.8299,
+            "RMSE_dB": 5.8554
+        },
+        {
+            "Device": "ED1",
+            "Test_Samples": 6834,
+            "R2": 0.7559,
+            "RMSE_dB": 7.2648
+        },
+        {
+            "Device": "ED2",
+            "Test_Samples": 6948,
+            "R2": 0.6128,
+            "RMSE_dB": 5.7329
+        },
+        {
+            "Device": "ED3",
+            "Test_Samples": 6805,
+            "R2": 0.8098,
+            "RMSE_dB": 5.7508
+        },
+        {
+            "Device": "ED4",
+            "Test_Samples": 6837,
+            "R2": 0.5813,
+            "RMSE_dB": 4.2224
+        },
+        {
+            "Device": "ED5",
+            "Test_Samples": 7066,
+            "R2": 0.0884,
+            "RMSE_dB": 4.8495
+        }
+    ]
+}
