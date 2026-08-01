@@ -1,7 +1,12 @@
 # Decentralized Edge Intelligence for LoRaWAN
 ### Federated Learning for Environment-Driven Path Loss and Link Quality Modeling
 
-This repository documents a Master's thesis project exploring Federated TinyML for indoor LoRaWAN path-loss prediction, benchmarked against a centralized baseline and evaluated for real hardware feasibility on the Arduino MKR WAN 1310.
+
+Indoor LoRaWAN deployments are notoriously hard to model accurately — walls, humidity, and CO2 levels all distort signal propagation in ways static path-loss formulas can't capture. Centralized machine learning can learn these patterns, but it demands streaming raw sensor data to a server, which quickly collides with LoRaWAN's strict 1% duty-cycle limit, drains battery-powered nodes, and raises privacy concerns for occupancy-revealing environmental data.
+
+This thesis asks whether a **federated, on-device approach** can close that gap: can a lightweight 89-parameter TinyML model, trained collaboratively across distributed end devices via FedAvg, match centralized accuracy without ever transmitting raw data? The results say yes. The federated model retains **96.9% of centralized accuracy** (R²=0.8807 vs. 0.9089), while cutting per-node data volume by **1.64x** and radio energy consumption by **11.36x**. A hardware feasibility study further confirms the approach runs comfortably on an Arduino MKR WAN 1310, fitting the full model update into a single LoRaWAN packet and staying well within duty-cycle and energy budgets.
+
+The repository documents the full investigation — from a year-long multi-room data collection campaign, through the centralized-vs-federated benchmark, to the hardware feasibility analysis above.
 
 ---
 
