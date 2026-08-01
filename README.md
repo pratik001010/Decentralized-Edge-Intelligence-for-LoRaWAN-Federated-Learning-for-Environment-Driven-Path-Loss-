@@ -6,7 +6,7 @@ Indoor LoRaWAN deployments are notoriously hard to model accurately : walls, hum
 
 This research asks whether a **federated, on-device approach** can close that gap: can a lightweight 89-parameter TinyML model, trained collaboratively across distributed end devices via FedAvg, match centralized accuracy without ever transmitting raw data? **The results say yes**. The federated model retains **96.9% of centralized accuracy (R²=0.8807 vs. 0.9089)** with RMSE increasing only slightly from **5.69 dB to 6.52 dB** (**+0.83 dB**, a modest tradeoff for the efficiency gains below), while cutting per-node data volume by **1.64x** and radio energy consumption by **11.36x**. A **hardware feasibility study further confirms** the approach runs comfortably on an **Arduino MKR WAN 1310**, fitting the full model update into a single LoRaWAN packet and staying well within duty-cycle and energy budgets.
 
-The repository documents the full investigation : from a year-long multi-room data collection campaign, through the centralized-vs-federated benchmark, to the hardware feasibility analysis above.
+ **Prior work:** The centralized ML baseline (MLR, Random Forest, XGBoost) and environmental data collection underpinning this thesis are documented in the predecessor repository — [LoRaWAN Indoor Office Environments: Environmental Effects on Path Loss & Signal Reliability](https://github.com/pratik001010/LoRaWAN-in-Indoor-Office-Environments-Environmental-Effects-on-Path-Loss-and-Signal-Reliability). This repository extends that foundation toward a fully federated, on-device learning framework.
 
 ---
 
