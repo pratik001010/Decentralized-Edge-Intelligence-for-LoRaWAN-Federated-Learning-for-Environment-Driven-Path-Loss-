@@ -64,8 +64,6 @@ Six clients train locally (5 local epochs per round) and send weight updates to 
 
 FedAvg with 5 local epochs reaches R²=0.8807 and RMSE=6.52 dB by round 50, approaching the centralized benchmark of R²=0.9089.
 
-![FedAvg Convergence — with table](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/19.png)
-
 ![FedAvg Convergence — chart only variant](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/21.png)
 
 ## 11. Per-Client Performance (Non-IID)
