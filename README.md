@@ -2,10 +2,51 @@
 ### Federated Learning for Environment-Driven Path Loss and Link Quality Modeling
 
 
-Indoor LoRaWAN deployments are notoriously hard to model accurately : walls, humidity, PM2.5, temp, Baro pressure, and CO2 levels all distort signal propagation in ways static path-loss formulas can't capture. Centralized machine learning can learn these patterns, but it demands streaming raw sensor data to a server, which quickly collides with LoRaWAN's strict 1% duty-cycle limit, drains battery-powered nodes, and raises privacy concerns for occupancy-revealing environmental data.
-
-This research asks whether a **federated, on-device approach** can close that gap: can a lightweight 89-parameter TinyML model, trained collaboratively across distributed end devices via FedAvg, match centralized accuracy without ever transmitting raw data? **The results say yes**. The federated model retains **96.9% of centralized accuracy (R²=0.8807 vs. 0.9089)** with RMSE increasing only slightly from **5.69 dB to 6.52 dB** (**+0.83 dB**, a modest tradeoff for the efficiency gains below), while cutting per-node data volume by **1.64x** and radio energy consumption by **11.36x**. A **hardware feasibility study further confirms** the approach runs comfortably on an **Arduino MKR WAN 1310**, fitting the full model update into a single LoRaWAN packet and staying well within duty-cycle and energy budgets.
-
+Abstract
+The rapid expansion of the Internet of Things has pushed intelligence away from centralized
+clouds and toward the edge, a shift made possible by Tiny Machine Learning (TinyML):
+running compact machine learning models directly on microcontrollers with only a few
+kilobytes of memory to spare. TinyML matters most for networks like Long Range Wide
+Area Network (LoRaWAN). It gives long range and battery-friendly connectivity, but the
+tradeoff is steep: a 1% duty-cycle ceiling, uplink payloads capped at a few hundred bytes,
+and battery budgets built for years, not months. Indoor path loss prediction runs straight
+into these limits.
+Radio signals indoors do not behave the way they do outdoors. Walls absorb and scatter
+them, humidity and temperature shift how materials interact with the signal, and CO2
+levels, a proxy for human occupancy, add a further layer of interference that distance-only
+formulas were never built to handle. Worse, the channel itself keeps shifting: reflections
+bounce unpredictably, signal strength drops without warning, and shadow fading breaks
+the assumption that propagation stays steady over time. Prior centralized regression work
+tried to fix this by folding environmental covariates into the model, but it still depends
+on streaming raw sensor data to a central server, which quickly runs into LoRaWAN’s
+duty-cycle ceiling, drains node batteries, and exposes occupancy-revealing environmental
+readings that raise real privacy concerns.
+This thesis tackles that gap with a Federated Learning (FL) framework paired with
+on-device TinyML inference. A compact Dense(9-8-1) Multilayer Perceptron with 89
+trainable parameters runs across six edge nodes, each predicting expected path loss ( dB )
+locally from nine covariates, log-distance, wall counts, environmental readings, and gateway
+Signal-to-Noise Ratio (SNR), while raw sensor data never leaves the device. Using Federated
+Averaging (FedAvg) with five local epochs, the model trains over 50 communication rounds
+on a 12-month, six-room indoor dataset exceeding two million measurements, naturally
+partitioned non-Independent and Identically Distributed (IID) by physical room location.
+The federated model reaches an R2 of 0.8807 and RMSE of 6.52 dB, retaining 96.9%
+of the centralized baseline’s accuracy (R2 0.9089, RMSE 5.6872 dB), a gap of just
+0.83 dB (+14.6% relative). Looking at individual devices rather than the aggregate,
+FedAvg actually outperforms the centralized model on every single node, lifting the
+mean per-device R2 from 0.613 to 0.689 and lowering mean RMSE from 5.61 dB to
+4.91 dB. On the communication side, quantized int8 weight updates of just 89 bytes
+fit inside a single LoRaWAN packet, cutting daily data volume per node by 1.64×
+(from 123,300 bytes to 75,183 bytes) and active transceiver energy by 11.36× (from
+6,795.78 mJ to 597.99 mJ over a 7.1-day cycle). Compilation results confirm the
+model fits comfortably within hardware limits. Flash usage comes in at 28.4 KB out of
+the 256 KB budget, just 11%, leaving plenty of headroom for future firmware growth.
+Inference runs in under 0.15 ms, and a full local training round takes about 1.1 seconds,
+well inside the 32 KB Static Random Access Memory (SRAM) ceiling of the Arduino
+MKR WAN 1310. Together, these results show that decentralized, privacy-preserving path
+loss modeling is not just theoretically sound but practically deployable on real LoRaWAN
+hardware.
+Keywords: Federated Learning, TinyML, LoRaWAN, LPWAN, Path Loss Modeling,
+Edge Intelligence, Indoor Propagation, Internet of Things.
  **Prior work:** The centralized ML baseline (MLR, Random Forest, XGBoost) and environmental data collection underpinning this work are documented in the predecessor repository : [LoRaWAN Indoor Office Environments: Environmental Effects on Path Loss & Signal Reliability](https://github.com/pratik001010/LoRaWAN-in-Indoor-Office-Environments-Environmental-Effects-on-Path-Loss-and-Signal-Reliability). This repository extends that foundation toward a fully federated, on-device learning framework.
 
 ---
