@@ -1,12 +1,26 @@
 /*
- * model.h
- * 
- * Auto-generated TensorFlow Lite Micro model
- * Link State Classification for MKR WAN 1310
- * 
- * Model size: 2704 bytes
- * Input: 5 float32 features
- * Output: 3 float32 probabilities
+ * Embedded TensorFlow Lite Micro inference model.
+ *
+ * Purpose:
+ *   Path-loss regression inference on the Arduino MKR WAN 1310.
+ *
+ * Scope:
+ *   This artifact stores a pre-trained TFLite model for inference only.
+ *   It does not contain training data, gradients, optimizer state,
+ *   backpropagation routines, local model-update generation, or FedAvg
+ *   aggregation logic.
+ *
+ * Provenance:
+ *   Source experiment: Archived baseline inference model (pending final canonical rerun export)
+ *   Dataset version: Indoor LoRaWAN environmental measurement campaign (Hölderlinstraße Campus, Siegen)
+ *   Model architecture: Compact Multilayer Perceptron
+ *   Input schema: Normalized environmental and radio features
+ *   Quantization: TensorFlow Lite FlatBuffer (2,704 bytes)
+ *   Export date: Archived artifact
+ *
+ * Note:
+ *   This model header is retained as an archived inference-only artifact.
+ *   Local on-device federated training is evaluated separately in the offline Python simulation.
  */
 
 #ifndef MODEL_H
