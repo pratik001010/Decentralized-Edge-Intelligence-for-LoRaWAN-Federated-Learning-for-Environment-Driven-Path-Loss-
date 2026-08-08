@@ -1,7 +1,7 @@
 """
 run_centralized_365_10min.py
 ============================
-Centralized Neural Network Baseline Simulation on the 365-Day 10-Minute Staggered Dataset (207,885 rows).
+Centralized Neural Network Baseline Simulation on the 365-Day 10-Minute Staggered Dataset (206,957 rows).
 
 Master's Thesis:
     "Decentralized Edge Intelligence for LoRaWAN: Federated Learning for
@@ -9,7 +9,15 @@ Master's Thesis:
 
 Author  : Pratik Khadka
 Uni     : University of Siegen
-Date    : 2025
+Date    : 2025/2026
+
+UPDATED VERSION:
+  Aligned with FedAvg simulation pipeline for 100% experimental consistency & zero data leakage:
+  1. Uses canonical 10-minute dataset (365_days_staggered_10min_sampled.csv, ~206,957 rows)
+  2. Matched hyperparameters (batch_size=512, lr=0.01)
+  3. No data leakage: StandardScaler fitted strictly on training partition (X_train)
+  4. Proper 3-way split: Train (140,729), Val (24,835), Test (41,393)
+  5. Per-device evaluation on held-out test set with pooled RMSE verification
 """
 
 import os
@@ -41,11 +49,15 @@ np.random.seed(SEED)
 tf.random.set_seed(SEED)
 
 # Output directory & Dataset path
-OUTPUT_DIR = r"c:\Users\prati\Desktop\edge AI\FederatedTinyML\centralized_365_day_10_min"
+OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__)) if __file__ else r"c:\Users\prati\Desktop\edge AI\FederatedTinyML\centralized_365_day_10_min"
 FIGURES_DIR = os.path.join(OUTPUT_DIR, "figures")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
-DATASET_PATH = r"c:\Users\prati\Desktop\edge AI\FederatedTinyML\365_days_staggered_10min_sampled.csv"
+DATASET_PATHS = [
+    r"365_days_staggered_10min_sampled.csv",
+    r"..\365_days_staggered_10min_sampled.csv",
+    r"c:\Users\prati\Desktop\edge AI\FederatedTinyML\365_days_staggered_10min_sampled.csv",
+]
 
 FEATURE_COLS = [
     "log_distance",  # 10 * log10(d / d0)
@@ -67,13 +79,22 @@ LEARNING_RATE = 0.01
 
 
 def load_and_preprocess_data():
-    print(f"Loading 365-day dataset from: {DATASET_PATH}...")
-    if not os.path.exists(DATASET_PATH):
-        raise FileNotFoundError(f"Dataset not found at: {DATASET_PATH}")
+    dataset_path = None
+    for p in DATASET_PATHS:
+        if os.path.exists(p):
+            dataset_path = p
+            break
 
-    df = pd.read_csv(DATASET_PATH, low_memory=False)
+    if dataset_path is None:
+        raise FileNotFoundError(f"Dataset not found in paths: {DATASET_PATHS}")
+
+    print(f"Loading 365-day dataset from: {dataset_path}...")
+    df = pd.read_csv(dataset_path, low_memory=False)
     raw_rows = len(df)
     print(f"Raw Dataset Shape: {df.shape}")
+
+    if "dev_id" in df.columns and "device_id" not in df.columns:
+        df["device_id"] = df["dev_id"]
 
     # Remove known corrupted/anomalous readings
     pa = ((df["co2"] == 21547.0) & (df["humidity"] == 156.65) & (df["temperature"] == 174.90) & (df["pressure"] == 3.21) & (df["pm25"] == 33.93))
@@ -84,12 +105,18 @@ def load_and_preprocess_data():
     anom_count = int(bad.sum())
 
     # Convert pressure to true hPa
-    df["pressure"] = pd.to_numeric(df["pressure"], errors="coerce") * 3.125
+    if "pressure" in df.columns:
+        df["pressure"] = pd.to_numeric(df["pressure"], errors="coerce")
+        if df["pressure"].mean() < 500:
+            df["pressure"] = df["pressure"] * 3.125
 
     # Feature engineering
-    df["log_distance"] = 10.0 * np.log10(pd.to_numeric(df["distance"], errors="coerce").clip(lower=1.0))
-    df["W_brick"] = pd.to_numeric(df["c_walls"], errors="coerce")
-    df["W_wood"] = pd.to_numeric(df["w_walls"], errors="coerce")
+    if "distance" in df.columns and "log_distance" not in df.columns:
+        df["log_distance"] = 10.0 * np.log10(pd.to_numeric(df["distance"], errors="coerce").clip(lower=1.0))
+    if "c_walls" in df.columns and "W_brick" not in df.columns:
+        df["W_brick"] = pd.to_numeric(df["c_walls"], errors="coerce")
+    if "w_walls" in df.columns and "W_wood" not in df.columns:
+        df["W_wood"] = pd.to_numeric(df["w_walls"], errors="coerce")
 
     # Clean numeric columns & target boundaries
     for col in FEATURE_COLS + [TARGET_COL]:
@@ -103,29 +130,29 @@ def load_and_preprocess_data():
 
 
 def split_and_scale_data(df):
-    train_dfs = []
-    test_dfs = []
+    X_all = df[FEATURE_COLS].values.astype(np.float32)
+    y_all = df[TARGET_COL].values.astype(np.float32)
+    dev_all = df[DEVICE_COL].values
 
-    for dev in sorted(df[DEVICE_COL].unique()):
-        dev_df = df[df[DEVICE_COL] == dev].copy()
-        tr_d, te_d = train_test_split(dev_df, test_size=0.20, random_state=SEED, shuffle=True)
-        train_dfs.append(tr_d)
-        test_dfs.append(te_d)
+    # Step 1: Split 80% train+val, 20% test
+    X_train_val_raw, X_test_raw, y_train_val, y_test, dev_train_val, dev_test = train_test_split(
+        X_all, y_all, dev_all, test_size=0.20, random_state=SEED, stratify=dev_all
+    )
 
-    train_full = pd.concat(train_dfs).sample(frac=1.0, random_state=SEED).reset_index(drop=True)
-    test_full = pd.concat(test_dfs).sample(frac=1.0, random_state=SEED).reset_index(drop=True)
+    # Step 2: Split train_val into 85% train, 15% val
+    X_train_raw, X_val_raw, y_train, y_val, dev_train, dev_val = train_test_split(
+        X_train_val_raw, y_train_val, dev_train_val, test_size=0.15, random_state=SEED, stratify=dev_train_val
+    )
 
-    print(f"Train Set: {len(train_full):,} | Held-Out Global Test Set: {len(test_full):,}")
+    print(f"Train Set: {len(X_train_raw):,} | Val Set: {len(X_val_raw):,} | Held-Out Test Set: {len(X_test_raw):,}")
 
-    # Scaler fitted STRICTLY on train_full (zero data leakage)
+    # Scaler fitted STRICTLY on X_train_raw (zero data leakage)
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(train_full[FEATURE_COLS])
-    y_train = train_full[TARGET_COL].values
+    X_train = scaler.fit_transform(X_train_raw)
+    X_val   = scaler.transform(X_val_raw)
+    X_test  = scaler.transform(X_test_raw)
 
-    X_test = scaler.transform(test_full[FEATURE_COLS])
-    y_test = test_full[TARGET_COL].values
-
-    return train_full, test_full, X_train, y_train, X_test, y_test, scaler
+    return X_train, y_train, dev_train, X_val, y_val, dev_val, X_test, y_test, dev_test, scaler
 
 
 def build_model():
@@ -151,19 +178,17 @@ def main():
     # 1. Load and preprocess data
     df, raw_rows, anom_count = load_and_preprocess_data()
 
-    # 2. Split and scale data
-    train_full, test_full, X_train, y_train, X_test, y_test, scaler = split_and_scale_data(df)
+    # 2. Split and scale data (zero data leakage)
+    X_train, y_train, dev_train, X_val, y_val, dev_val, X_test, y_test, dev_test, scaler = split_and_scale_data(df)
 
-    # 3. Validation split (15% carved from training set)
-    X_tr, X_val, y_tr, y_val = train_test_split(X_train, y_train, test_size=0.15, random_state=SEED, shuffle=True)
-    var_tr = np.var(y_tr)
+    var_tr = np.var(y_train)
     var_val = np.var(y_val)
 
-    # 4. Build Keras MLP Dense(9 -> 8 -> 1)
+    # 3. Build Keras MLP Dense(9 -> 8 -> 1)
     model = build_model()
     model.summary()
 
-    # Custom Epoch Callback tracking 100% RAW metrics without any artificial offsets
+    # Custom Epoch Callback tracking metrics
     class RawMetricLogger(keras.callbacks.Callback):
         def __init__(self, model, X_tr, y_tr, X_val, y_val, var_tr, var_val):
             super().__init__()
@@ -180,7 +205,6 @@ def main():
             logs = logs or {}
             val_loss = logs.get("val_loss")
 
-            # Evaluate training loss at the exact end-of-epoch weight snapshot
             tr_eval = self.model_ref.evaluate(self.X_tr, self.y_tr, batch_size=2048, verbose=0)
             tr_loss = tr_eval[0] if isinstance(tr_eval, list) else tr_eval
 
@@ -202,12 +226,12 @@ def main():
             if (epoch + 1) % 5 == 0 or epoch == 0 or epoch == EPOCHS - 1:
                 print(f"  Epoch {epoch+1:2d}/{EPOCHS} — Train R2: {tr_r2:.4f} | Val R2: {val_r2:.4f} | Train RMSE: {tr_rmse:.2f} dB | Val RMSE: {val_rmse:.2f} dB")
 
-    logger_cb = RawMetricLogger(model, X_tr, y_tr, X_val, y_val, var_tr, var_val)
+    logger_cb = RawMetricLogger(model, X_train, y_train, X_val, y_val, var_tr, var_val)
 
     print(f"\n--- Training Centralized MLP over {EPOCHS} Epochs (lr={LEARNING_RATE}, batch_size={BATCH_SIZE}) ---")
     train_start = time.time()
     history = model.fit(
-        X_tr, y_tr,
+        X_train, y_train,
         validation_data=(X_val, y_val),
         epochs=EPOCHS,
         batch_size=BATCH_SIZE,
@@ -217,7 +241,7 @@ def main():
     train_time = time.time() - train_start
     print(f"Training completed cleanly in {train_time:.2f} seconds!")
 
-    # 5. Global Test Evaluation
+    # 4. Global Test Evaluation
     y_pred_test = model.predict(X_test, verbose=0).flatten()
     final_r2 = r2_score(y_test, y_pred_test)
     final_rmse = np.sqrt(mean_squared_error(y_test, y_pred_test))
@@ -228,46 +252,58 @@ def main():
     print(f"  Test RMSE (dB) : {final_rmse:.4f} dB")
     print("==========================================================================")
 
-    # 6. Export Epoch Metrics
+    # 5. Export Epoch Metrics
     epochs_df = pd.DataFrame(logger_cb.epoch_metrics)
     epochs_df.to_csv(os.path.join(OUTPUT_DIR, "epoch_training_metrics.csv"), index=False)
 
-    # 7. Per-Device Breakdown
-    test_full["pred_exp_pl"] = y_pred_test
+    # 6. Per-Device Evaluation on Held-Out Test Set
     per_device_records = []
+    total_squared_error = 0.0
+    total_test_n = 0
 
-    for dev in sorted(test_full[DEVICE_COL].unique()):
-        dev_df = test_full[test_full[DEVICE_COL] == dev]
-        r2_dev = r2_score(dev_df[TARGET_COL], dev_df["pred_exp_pl"])
-        rmse_dev = np.sqrt(mean_squared_error(dev_df[TARGET_COL], dev_df["pred_exp_pl"]))
+    for dev in sorted(np.unique(dev_test)):
+        mask_dev = dev_test == dev
+        dev_X_test = X_test[mask_dev]
+        dev_y_test = y_test[mask_dev]
+
+        dev_pred = model.predict(dev_X_test, verbose=0).flatten()
+        r2_dev = r2_score(dev_y_test, dev_pred)
+        rmse_dev = np.sqrt(mean_squared_error(dev_y_test, dev_pred))
+
+        total_squared_error += np.sum((dev_y_test - dev_pred) ** 2)
+        total_test_n += len(dev_y_test)
 
         per_device_records.append({
             "Device": dev,
-            "Test_Samples": len(dev_df),
+            "Test_Samples": len(dev_y_test),
             "R2": round(r2_dev, 4),
             "RMSE_dB": round(rmse_dev, 4)
         })
 
+    pooled_rmse = np.sqrt(total_squared_error / total_test_n)
+    print(f"Pooled Per-Device RMSE: {pooled_rmse:.4f} dB vs Global Test RMSE: {final_rmse:.4f} dB")
+
     per_device_df = pd.DataFrame(per_device_records)
-    print("\nPer-Device Evaluation Breakdown:")
+    print("\nPer-Device Evaluation Breakdown (Held-Out Test Set):")
     print(per_device_df.to_string(index=False))
     per_device_df.to_csv(os.path.join(OUTPUT_DIR, "per_device_metrics.csv"), index=False)
 
-    # 8. Summary JSON & TXT
+    # 7. Summary JSON & TXT
     results_summary = {
         "dataset": "365_days_staggered_10min_sampled.csv",
         "raw_rows": raw_rows,
         "anomalies_removed": anom_count,
         "clean_rows": len(df),
-        "train_samples": len(X_tr),
+        "train_samples": len(X_train),
         "val_samples": len(X_val),
-        "test_samples": len(test_full),
+        "test_samples": len(X_test),
         "training_time_seconds": round(train_time, 2),
         "epochs": EPOCHS,
         "learning_rate": LEARNING_RATE,
         "batch_size": BATCH_SIZE,
         "final_test_r2": round(final_r2, 4),
         "final_test_rmse_db": round(final_rmse, 4),
+        "pooled_test_rmse_db": round(pooled_rmse, 4),
         "per_device": per_device_records
     }
 
@@ -276,55 +312,43 @@ def main():
 
     with open(os.path.join(OUTPUT_DIR, "centralized_365_summary.txt"), "w") as f:
         f.write("=== CENTRALIZED BASELINE SIMULATION SUMMARY (365-DAY 10-MIN DATASET) ===\n")
-        f.write(f"Total Rows: {len(df):,} (Train: {len(X_tr):,}, Val: {len(X_val):,}, Test: {len(test_full):,})\n")
+        f.write(f"Total Rows: {len(df):,} (Train: {len(X_train):,}, Val: {len(X_val):,}, Test: {len(X_test):,})\n")
         f.write(f"Training Time: {train_time:.2f} s over {EPOCHS} Epochs\n")
         f.write(f"Final Test R2 Score: {final_r2:.4f}\n")
-        f.write(f"Final Test RMSE: {final_rmse:.4f} dB\n\n")
+        f.write(f"Final Test RMSE: {final_rmse:.4f} dB\n")
+        f.write(f"Pooled Per-Device Test RMSE: {pooled_rmse:.4f} dB\n\n")
         f.write("Per-Device Performance Breakdown:\n")
         f.write(per_device_df.to_string(index=False) + "\n")
 
-    # 9. High-Resolution Visualizations (Matching thesis_figures/centralized_training_curves.png)
-    print("\n--- Generating High-Resolution Figures (Matching thesis_figures/centralized_training_curves.png) ---")
+    # 8. High-Resolution Visualizations
+    print("\n--- Generating High-Resolution Figures ---")
     plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 5.5), dpi=300)
-
     epochs_x = epochs_df["epoch"]
 
     # Subplot 1: R^2 Score
     ax1 = axes[0]
     ax1.plot(epochs_x, epochs_df["train_r2"], label="Training $R^2$", color="#1f77b4", linewidth=2.5)
     ax1.plot(epochs_x, epochs_df["val_r2"], label="Validation $R^2$", color="#ff7f0e", linewidth=2.5, linestyle="--")
-    ax1.set_xlabel("Epoch", fontsize=13, fontweight="normal")
-    ax1.set_ylabel("$R^2$ Score", fontsize=13, fontweight="normal")
+    ax1.set_xlabel("Epoch", fontsize=13)
+    ax1.set_ylabel("$R^2$ Score", fontsize=13)
     ax1.set_ylim(-1.5, 1.05)
     ax1.legend(loc="lower right", fontsize=11, frameon=True, facecolor="white", framealpha=0.9)
     ax1.grid(True, linestyle="--", alpha=0.3)
-    ax1.tick_params(labelsize=11)
 
     # Subplot 2: RMSE (dB)
     ax2 = axes[1]
     ax2.plot(epochs_x, epochs_df["train_rmse"], label="Training RMSE", color="#1f77b4", linewidth=2.5)
     ax2.plot(epochs_x, epochs_df["val_rmse"], label="Validation RMSE", color="#ff7f0e", linewidth=2.5, linestyle="--")
-    ax2.set_xlabel("Epoch", fontsize=13, fontweight="normal")
-    ax2.set_ylabel("RMSE (dB)", fontsize=13, fontweight="normal")
+    ax2.set_xlabel("Epoch", fontsize=13)
+    ax2.set_ylabel("RMSE (dB)", fontsize=13)
     ax2.legend(loc="upper right", fontsize=11, frameon=True, facecolor="white", framealpha=0.9)
     ax2.grid(True, linestyle="--", alpha=0.3)
-    ax2.tick_params(labelsize=11)
 
     plt.tight_layout()
     fig_path = os.path.join(FIGURES_DIR, "centralized_training_curves.png")
     plt.savefig(fig_path, dpi=300, bbox_inches="tight")
-    
-    # Also save to main output directory
-    plt.savefig(os.path.join(OUTPUT_DIR, "centralized_training_curves.png"), dpi=300, bbox_inches="tight")
-    
-    # Copy directly to thesis_figures in latex directory
-    latex_fig_dir = r"c:\Users\prati\Desktop\edge AI\FederatedTinyML\Decentralized_Edge_Intelligence_for_LoRaWAN__Federated_Learning_for_Environment_Driven_Path_Loss_and_Link_Quality_Modeling\thesis_figures"
-    if os.path.exists(latex_fig_dir):
-        import shutil
-        shutil.copy(fig_path, os.path.join(latex_fig_dir, "centralized_training_curves.png"))
-
     plt.close()
 
     total_elapsed = time.time() - t0
