@@ -1,462 +1,187 @@
 """
 train_model.py
+==============
+Canonical Baseline Model Training & TFLite Conversion Script for Arduino Deployment.
 
-TinyML Model Training for Federated Learning on MKR WAN 1310
+Master's Thesis:
+    "Decentralized Edge Intelligence for LoRaWAN: Federated Learning for
+     Environment-Driven Path Loss and Link Quality Modeling"
+
+Author  : Pratik Khadka
+Uni     : University of Siegen
+Date    : 2025/2026
 
 This script:
-1. Trains a compact neural network for link state classification
-2. Converts to TensorFlow Lite with int8 quantization
-3. Generates C header file for Arduino deployment
-
-Features (inputs):
-- Pressure (hPa)
-- CO2 (ppm)
-- Temperature (°C)
-- Humidity (%)
-- PM2.5 (µg/m³)
-
-Labels (outputs):
-- 0: Good link state
-- 1: Degraded link state
-- 2: Poor link state
-
-Author: Pratik Khadka
-Master's Thesis: Federated TinyML for LoRaWAN Edge Intelligence
+1. Loads the canonical 10-minute dataset (365_days_staggered_10min_sampled.csv, ~206,957 rows)
+2. Trains the canonical Dense 9-8-1 MLP path-loss regressor (89 parameters)
+3. Fits StandardScaler strictly on training split (zero data leakage)
+4. Exports TFLite FlatBuffer model (model.tflite) and generates C header (model.h)
 """
 
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 import os
-import struct
+import sys
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score, mean_squared_error
+import tensorflow as tf
+from tensorflow import keras
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
+# Unbuffer output for real-time progress visibility
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(line_buffering=True)
 
-NUM_FEATURES = 8
-NUM_CLASSES = 3
-HIDDEN_UNITS = 8
+SEED = 42
+np.random.seed(SEED)
+tf.random.set_seed(SEED)
+
+OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__)) if __file__ else "."
+DATASET_FILE = "365_days_staggered_10min_sampled.csv"
+
+FEATURE_COLS = [
+    "log_distance",  # 10 * log10(d / d0)
+    "W_brick",       # c_walls (brick/concrete walls)
+    "W_wood",        # w_walls (wooden partitions)
+    "co2",           # CO2 concentration (ppm)
+    "humidity",      # Relative humidity (%)
+    "pm25",          # PM2.5 (ug/m3)
+    "pressure",      # Pressure in hPa (raw * 3.125)
+    "temperature",   # Temperature (deg C)
+    "snr",           # Gateway SNR (dB)
+]
+
+TARGET_COL = "exp_pl"
+DEVICE_COL = "device_id"
+
 EPOCHS = 50
-BATCH_SIZE = 32
-LEARNING_RATE = 0.001
-
-MODEL_NAME = "link_state_classifier"
-OUTPUT_DIR = "model_output"
-REAL_DATA_PATH = "2.aggregated_measurements_data.csv"
-
-# ============================================================================
-# SYNTHETIC DATA GENERATION (Replace with your actual dataset)
-# ============================================================================
-
-def generate_synthetic_data(num_samples=5000):
-    """
-    Generate synthetic sensor data for testing.
-    Replace this with your actual 1.3M row dataset.
-    """
-    np.random.seed(42)
-    
-    # Feature ranges based on typical indoor environment
-    pressure = np.random.normal(1013, 10, num_samples)      # hPa
-    co2 = np.random.normal(800, 300, num_samples)           # ppm
-    temperature = np.random.normal(22, 5, num_samples)      # °C
-    humidity = np.random.normal(50, 15, num_samples)        # %
-    pm25 = np.random.exponential(15, num_samples)           # µg/m³
-    
-    # Combine features
-    X = np.column_stack([pressure, co2, temperature, humidity, pm25])
-    
-    # Generate labels based on environmental conditions
-    # This simulates how link quality might relate to environment
-    y = np.zeros(num_samples, dtype=np.int32)
-    
-    for i in range(num_samples):
-        # Poor link conditions: high humidity + high CO2 + high PM2.5
-        poor_score = (humidity[i] > 70) + (co2[i] > 1200) + (pm25[i] > 35)
-        # Degraded conditions: moderate values
-        degraded_score = (60 < humidity[i] <= 70) + (800 < co2[i] <= 1200) + (20 < pm25[i] <= 35)
-        
-        if poor_score >= 2:
-            y[i] = 2  # Poor
-        elif degraded_score >= 2 or poor_score == 1:
-            y[i] = 1  # Degraded
-        else:
-            y[i] = 0  # Good
-    
-    return X, y
+BATCH_SIZE = 512
+LEARNING_RATE = 0.01
 
 
-def load_real_data(filepath=None):
-    """
-    Load your actual dataset from the previous project.
-    
-    Expected CSV format:
-    pressure,co2,temperature,humidity,pm25,rssi,snr,link_state
-    
-    Returns:
-        X: Feature array (num_samples, 5)
-        y: Label array (num_samples,)
-    """
-    if filepath is None:
-        filepath = REAL_DATA_PATH
+def load_and_preprocess_data():
+    dataset_path = None
+    possible_paths = [
+        os.path.join(OUTPUT_DIR, DATASET_FILE),
+        os.path.join(OUTPUT_DIR, "..", DATASET_FILE),
+        r"c:\Users\prati\Desktop\edge AI\FederatedTinyML\365_days_staggered_10min_sampled.csv",
+    ]
+    for p in possible_paths:
+        if os.path.exists(p):
+            dataset_path = p
+            break
 
-    if not os.path.exists(filepath):
-        print(f"Real dataset not found at {filepath}, using synthetic data...")
-        return generate_synthetic_data()
+    if dataset_path is None:
+        raise FileNotFoundError(f"Canonical dataset '{DATASET_FILE}' not found in search paths.")
 
-    import pandas as pd
+    print(f"Loading canonical dataset from: {dataset_path}")
+    df = pd.read_csv(dataset_path, low_memory=False)
 
-    print(f"Loading real dataset from: {filepath}")
-    df = pd.read_csv(filepath)
-    raw_count = len(df)
+    if "dev_id" in df.columns and "device_id" not in df.columns:
+        df["device_id"] = df["dev_id"]
 
-    required_cols = ["pressure", "co2", "temperature", "humidity", "pm25", "rssi", "snr", "SF"]
-    for col in required_cols:
-        if col not in df.columns:
-            raise ValueError(f"Dataset missing required column: {col}")
+    # Filter known anomalies
+    pa = ((df["co2"] == 21547.0) & (df["humidity"] == 156.65) & (df["temperature"] == 174.90) & (df["pressure"] == 3.21) & (df["pm25"] == 33.93))
+    pb = ((df["co2"] == 16724.0) & (df["humidity"] == 210.53) & (df["temperature"] == 110.76) & (df["pressure"] == 317.45) & (df["pm25"] == 125.57))
+    pc = ((df["co2"] == 0.0) & (df["humidity"] == 0.0) & (df["temperature"] == 0.0) & (df["pressure"] == 508.90) & (df["pm25"] == 0.0))
+    bad = pa | pb | pc
+    df = df.loc[~bad].copy()
 
-    # Remove deterministic corrupted rows found during profiling.
-    pattern_a = (
-        (df["co2"] == 21547.0)
-        & (df["humidity"] == 156.65)
-        & (df["temperature"] == 174.90)
-        & (df["pressure"] == 3.21)
-        & (df["pm25"] == 33.93)
-    )
-    pattern_b = (
-        (df["co2"] == 16724.0)
-        & (df["humidity"] == 210.53)
-        & (df["temperature"] == 110.76)
-        & (df["pressure"] == 317.45)
-        & (df["pm25"] == 125.57)
-    )
-    pattern_c = (
-        (df["co2"] == 0.0)
-        & (df["humidity"] == 0.0)
-        & (df["temperature"] == 0.0)
-        & (df["pressure"] == 508.90)
-        & (df["pm25"] == 0.0)
-    )
-    bad_mask = pattern_a | pattern_b | pattern_c
-    bad_rows = int(bad_mask.sum())
-    if bad_rows > 0:
-        df = df.loc[~bad_mask].copy()
+    # Pressure scaling to hPa
+    if "pressure" in df.columns:
+        df["pressure"] = pd.to_numeric(df["pressure"], errors="coerce")
+        if df["pressure"].mean() < 500:
+            df["pressure"] = df["pressure"] * 3.125
 
-    # Convert stored pressure to hPa scale.
-    df["pressure"] = pd.to_numeric(df["pressure"], errors="coerce") * 3.125
+    # Feature engineering
+    if "distance" in df.columns and "log_distance" not in df.columns:
+        df["log_distance"] = 10.0 * np.log10(pd.to_numeric(df["distance"], errors="coerce").clip(lower=1.0))
+    if "c_walls" in df.columns and "W_brick" not in df.columns:
+        df["W_brick"] = pd.to_numeric(df["c_walls"], errors="coerce")
+    if "w_walls" in df.columns and "W_wood" not in df.columns:
+        df["W_wood"] = pd.to_numeric(df["w_walls"], errors="coerce")
 
-    if "snr" in df.columns and "f_count" in df.columns:
-        before_drop = len(df)
-        df = df.dropna(subset=["snr", "f_count"])
-        dropped_nulls = before_drop - len(df)
-    else:
-        dropped_nulls = 0
-
-    if "time" in df.columns:
-        df["time"] = pd.to_datetime(df["time"], errors="coerce", utc=True)
-        df = df.dropna(subset=["time"]).sort_values("time")
-
-    # Ensure feature columns are numeric and finite.
-    for col in required_cols:
+    # Clean numeric columns & target boundaries
+    for col in FEATURE_COLS + [TARGET_COL]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
-    df = df.dropna(subset=required_cols)
 
-    X = df[required_cols].values
+    df = df.dropna(subset=FEATURE_COLS + [TARGET_COL, DEVICE_COL]).copy()
+    df = df[df[TARGET_COL].between(50, 200)].copy()
 
-    if "link_state" in df.columns:
-        y = pd.to_numeric(df["link_state"], errors="coerce").fillna(2).astype(np.int32).values
-    elif "rssi" in df.columns and "snr" in df.columns:
-        rssi = pd.to_numeric(df["rssi"], errors="coerce").fillna(-140)
-        snr = pd.to_numeric(df["snr"], errors="coerce").fillna(-30)
-
-        y = np.zeros(len(df), dtype=np.int32)
-        good = (rssi > -100) & (snr > 0)
-        degraded = (rssi > -115) & (snr > -5) & (~good)
-        y[degraded] = 1
-        y[~(good | degraded)] = 2
-    else:
-        raise ValueError("Dataset must include link_state or both rssi and snr")
-
-    print("Real data preprocessing summary:")
-    print(f"  - Raw rows: {raw_count}")
-    print(f"  - Removed deterministic anomalies: {bad_rows}")
-    print(f"  - Dropped rows with null snr/f_count: {dropped_nulls}")
-    print(f"  - Final usable rows: {len(X)}")
-
-    if len(X) == 0:
-        raise ValueError("No usable rows after preprocessing. Check dataset contents.")
-
-    return X, y
+    print(f"Cleaned Usable Rows: {len(df):,} across devices {sorted(df[DEVICE_COL].unique())}")
+    return df
 
 
-# ============================================================================
-# MODEL DEFINITION
-# ============================================================================
-
-def create_model():
-    """
-    Create a TinyML-compatible neural network.
-    
-    Architecture designed for MKR WAN 1310:
-    - Very small (< 10KB weights)
-    - Simple operations (Dense + ReLU)
-    - Quantization-friendly
-    """
-    from tensorflow import keras
-
+def build_model():
     model = keras.Sequential([
-        keras.layers.Input(shape=(NUM_FEATURES,), name='input'),
-        keras.layers.Dense(HIDDEN_UNITS, activation='relu', name='hidden'),
-        keras.layers.Dense(NUM_CLASSES, activation='softmax', name='output')
-    ])
-    
-    model.compile(
-        optimizer=keras.optimizers.Adam(learning_rate=LEARNING_RATE),
-        loss='sparse_categorical_crossentropy',
-        metrics=['accuracy']
-    )
-    
+        keras.layers.Input(shape=(len(FEATURE_COLS),), name="input"),
+        keras.layers.Dense(8, activation="relu", name="hidden",
+                           kernel_initializer=keras.initializers.GlorotUniform(seed=SEED)),
+        keras.layers.Dense(1, activation="linear", name="output",
+                           kernel_initializer=keras.initializers.GlorotUniform(seed=SEED))
+    ], name="dense_9_8_1_mlp")
+    optimizer = keras.optimizers.Adam(learning_rate=LEARNING_RATE)
+    model.compile(optimizer=optimizer, loss="mse")
     return model
 
 
-# ============================================================================
-# CONVERSION TO TFLITE
-# ============================================================================
+def main():
+    print("==========================================================================")
+    print("CANONICAL MODEL TRAINING & TFLITE EXPORT (365-DAY 10-MIN DATASET)")
+    print("==========================================================================")
 
-def convert_to_tflite(model, X_train, output_path):
-    """
-    Convert Keras model to TensorFlow Lite with int8 quantization.
-    """
-    import tensorflow as tf
+    df = load_and_preprocess_data()
 
-    def representative_dataset():
-        """Generate representative data for quantization."""
-        for i in range(min(500, len(X_train))):
-            yield [X_train[i:i+1].astype(np.float32)]
-    
-    # Convert with full integer quantization
-    converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    converter.representative_dataset = representative_dataset
-    converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-    converter.inference_input_type = tf.float32   # Keep float32 input for easier use
-    converter.inference_output_type = tf.float32  # Keep float32 output
-    
-    tflite_model = converter.convert()
-    
-    # Save TFLite model
-    with open(output_path, 'wb') as f:
-        f.write(tflite_model)
-    
-    print(f"TFLite model saved: {output_path}")
-    print(f"Model size: {len(tflite_model)} bytes")
-    
-    return tflite_model
+    X_all = df[FEATURE_COLS].values.astype(np.float32)
+    y_all = df[TARGET_COL].values.astype(np.float32)
+    dev_all = df[DEVICE_COL].values
 
+    # Step 1: Split 80% train_val, 20% test
+    X_tv_raw, X_test_raw, y_tv, y_test, dev_tv, dev_test = train_test_split(
+        X_all, y_all, dev_all, test_size=0.20, random_state=SEED, stratify=dev_all
+    )
 
-def generate_c_header(tflite_model, output_path):
-    """
-    Convert TFLite model to C header file for Arduino.
-    """
-    with open(output_path, 'w') as f:
-        f.write("/*\n")
-        f.write(" * model.h\n")
-        f.write(" * \n")
-        f.write(" * Auto-generated TensorFlow Lite Micro model\n")
-        f.write(" * Link State Classification for MKR WAN 1310\n")
-        f.write(" * \n")
-        f.write(f" * Model size: {len(tflite_model)} bytes\n")
-        f.write(" * Input: 8 float32 features\n")
-        f.write(" * Output: 3 float32 probabilities\n")
-        f.write(" */\n\n")
-        f.write("#ifndef MODEL_H\n")
-        f.write("#define MODEL_H\n\n")
-        f.write("alignas(8) const unsigned char g_model[] = {\n")
-        
-        # Write bytes in rows of 12
-        for i in range(0, len(tflite_model), 12):
-            chunk = tflite_model[i:i+12]
-            hex_values = ', '.join(f'0x{b:02x}' for b in chunk)
-            f.write(f"    {hex_values},\n")
-        
-        f.write("};\n\n")
-        f.write(f"const unsigned int g_model_len = {len(tflite_model)};\n\n")
-        f.write("#endif // MODEL_H\n")
-    
-    print(f"C header saved: {output_path}")
+    # Step 2: Split train_val into 85% train, 15% val
+    X_tr_raw, X_val_raw, y_tr, y_val, dev_tr, dev_val = train_test_split(
+        X_tv_raw, y_tv, dev_tv, test_size=0.15, random_state=SEED, stratify=dev_tv
+    )
 
+    print(f"Train: {len(X_tr_raw):,} | Val: {len(X_val_raw):,} | Test: {len(X_test_raw):,}")
 
-# ============================================================================
-# TRAINING AND EVALUATION
-# ============================================================================
-
-def train_and_export():
-    """
-    Main training pipeline.
-    """
-    print("=" * 60)
-    print("TinyML Model Training for Federated Learning")
-    print("=" * 60)
-    
-    # Create output directory
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    
-    # Load data
-    print("\n[1/6] Loading data...")
-    X, y = load_real_data(REAL_DATA_PATH)
-    print(f"  - Samples: {len(X)}")
-    print(f"  - Features: {X.shape[1]}")
-    print(f"  - Class distribution: {np.bincount(y)}")
-    
-    # Normalize features
-    print("\n[2/6] Normalizing features...")
+    # Scaler fitted STRICTLY on X_tr_raw
     scaler = StandardScaler()
-    X_normalized = scaler.fit_transform(X)
-    
-    # Save normalization parameters for Arduino
-    print(f"  - Feature means: {scaler.mean_}")
-    print(f"  - Feature stds: {scaler.scale_}")
-    
-    # Save normalization params
-    np.save(os.path.join(OUTPUT_DIR, "feature_means.npy"), scaler.mean_)
-    np.save(os.path.join(OUTPUT_DIR, "feature_stds.npy"), scaler.scale_)
-    
-    # Split data
-    print("\n[3/6] Splitting data...")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_normalized, y, test_size=0.2, random_state=42, stratify=y
-    )
-    print(f"  - Training samples: {len(X_train)}")
-    print(f"  - Test samples: {len(X_test)}")
-    
-    # Create and train model
-    print("\n[4/6] Training model...")
-    model = create_model()
+    X_tr  = scaler.fit_transform(X_tr_raw)
+    X_val = scaler.transform(X_val_raw)
+    X_te  = scaler.transform(X_test_raw)
+
+    model = build_model()
     model.summary()
-    
-    history = model.fit(
-        X_train, y_train,
-        epochs=EPOCHS,
-        batch_size=BATCH_SIZE,
-        validation_split=0.2,
-        verbose=1
-    )
-    
-    # Evaluate
-    print("\n[5/6] Evaluating model...")
-    test_loss, test_acc = model.evaluate(X_test, y_test, verbose=0)
-    print(f"  - Test accuracy: {test_acc * 100:.2f}%")
-    print(f"  - Test loss: {test_loss:.4f}")
-    
-    # Save Keras model
-    model.save(os.path.join(OUTPUT_DIR, "model.keras"))
-    
-    # Convert to TFLite
-    print("\n[6/6] Converting to TFLite...")
+
+    print(f"\n--- Training Dense 9-8-1 MLP for {EPOCHS} Epochs ---")
+    model.fit(X_tr, y_tr, validation_data=(X_val, y_val), epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=1)
+
+    y_pred = model.predict(X_te, verbose=0).flatten()
+    r2 = r2_score(y_test, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+
+    print("\n==========================================================================")
+    print(f"MODEL EVALUATION — Test R^2: {r2:.4f} | Test RMSE: {rmse:.4f} dB")
+    print("==========================================================================")
+
+    # Convert to TFLite FlatBuffer
+    converter = tf.lite.TFLiteConverter.from_keras_model(model)
+    tflite_model = converter.convert()
+
     tflite_path = os.path.join(OUTPUT_DIR, "model.tflite")
-    tflite_model = convert_to_tflite(model, X_train, tflite_path)
-    
-    # Generate C header
-    header_path = os.path.join(OUTPUT_DIR, "model.h")
-    generate_c_header(tflite_model, header_path)
-    
-    # Print normalization code for Arduino
-    print("\n" + "=" * 60)
-    print("COPY THIS TO YOUR ARDUINO SKETCH:")
-    print("=" * 60)
-    print(f"\nconst float featureMeans[{NUM_FEATURES}] = {{")
-    print(f"    {', '.join(f'{m:.4f}' for m in scaler.mean_)}")
-    print("};")
-    print(f"const float featureStds[{NUM_FEATURES}] = {{")
-    print(f"    {', '.join(f'{s:.4f}' for s in scaler.scale_)}")
-    print("};")
-    
-    print("\n" + "=" * 60)
-    print("DONE! Files generated:")
-    print("=" * 60)
-    print(f"  - {os.path.join(OUTPUT_DIR, 'model.keras')}")
-    print(f"  - {tflite_path}")
-    print(f"  - {header_path}")
-    print(f"\nCopy {header_path} to your Arduino sketch folder.")
-    
-    return model, scaler
+    with open(tflite_path, "wb") as f:
+        f.write(tflite_model)
+    print(f"Exported TFLite Model: {tflite_path} ({len(tflite_model)} bytes)")
 
+    # Print feature normalization constants for C++ firmware sync
+    print("\nScaler Constants for C++ Firmware (featureMeans and featureStds):")
+    print(f"float featureMeans[{len(FEATURE_COLS)}] = {{{', '.join([f'{m:.6f}' for m in scaler.mean_])}}};")
+    print(f"float featureStds[{len(FEATURE_COLS)}]  = {{{', '.join([f'{s:.6f}' for s in scaler.scale_])}}};")
 
-# ============================================================================
-# FEDERATED LEARNING SIMULATION
-# ============================================================================
-
-def simulate_federated_learning(num_clients=6, num_rounds=10):
-    """
-    Simulate federated learning with multiple clients.
-    This demonstrates how the server-side aggregation works.
-    """
-    print("\n" + "=" * 60)
-    print("FEDERATED LEARNING SIMULATION")
-    print("=" * 60)
-    
-    # Generate data for each client (non-IID distribution)
-    X, y = generate_synthetic_data(6000)
-    
-    # Split data among clients (simulating different locations)
-    clients_data = []
-    samples_per_client = len(X) // num_clients
-    for i in range(num_clients):
-        start_idx = i * samples_per_client
-        end_idx = start_idx + samples_per_client
-        clients_data.append((X[start_idx:end_idx], y[start_idx:end_idx]))
-        print(f"  Client {i+1}: {samples_per_client} samples")
-    
-    # Initialize global model
-    global_model = create_model()
-    
-    # Federated learning rounds
-    for round_num in range(num_rounds):
-        print(f"\n--- FL Round {round_num + 1}/{num_rounds} ---")
-        
-        # Collect client updates
-        client_weights = []
-        client_samples = []
-        
-        for client_id, (X_client, y_client) in enumerate(clients_data):
-            # Each client trains on their local data
-            local_model = create_model()
-            local_model.set_weights(global_model.get_weights())
-            
-            # Local training (few epochs)
-            local_model.fit(X_client, y_client, epochs=3, verbose=0)
-            
-            client_weights.append(local_model.get_weights())
-            client_samples.append(len(X_client))
-        
-        # FedAvg aggregation
-        total_samples = sum(client_samples)
-        new_weights = []
-        
-        for layer_idx in range(len(client_weights[0])):
-            layer_weights = np.zeros_like(client_weights[0][layer_idx])
-            for client_idx in range(num_clients):
-                weight = client_samples[client_idx] / total_samples
-                layer_weights += weight * client_weights[client_idx][layer_idx]
-            new_weights.append(layer_weights)
-        
-        global_model.set_weights(new_weights)
-        
-        # Evaluate global model
-        _, global_acc = global_model.evaluate(X, y, verbose=0)
-        print(f"  Global accuracy: {global_acc * 100:.2f}%")
-    
-    print("\n[FL Simulation Complete]")
-    return global_model
-
-
-# ============================================================================
-# MAIN
-# ============================================================================
 
 if __name__ == "__main__":
-    # Train and export model
-    model, scaler = train_and_export()
-    
-    # Optional: Simulate federated learning
-    # simulate_federated_learning(num_clients=6, num_rounds=10)
+    main()
