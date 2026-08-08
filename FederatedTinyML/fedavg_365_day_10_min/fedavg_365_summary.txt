@@ -4,7 +4,7 @@
   Author: Pratik Khadka | University of Siegen
 ================================================================================
 
-Generated      : 2026-07-23 02:19:24
+Generated      : 2026-07-23 02:18:06
 Execution Time : 35.3 minutes (2,118 seconds)
 Host CPU Config: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz (8 Cores, 16 Threads)
 TensorFlow     : 2.21.0
@@ -33,13 +33,14 @@ Dataset        : Indoor LoRaWAN, Hölderlinstraße Campus 8F, Siegen
 ── CENTRALIZED BASELINE (upper bound, same dataset) ────────────────────────────
   R²   : 0.9071
   RMSE : 5.7520 dB
+  MAE  : 4.2512 dB
 
 ── FEDERATED LEARNING RESULTS (FedAvg, McMahan et al. 2017) ────────────────────
-  Local Epochs    Final R²     RMSE (dB)    R² / Central  
-  -------------------------------------------------------
-  E=1             0.7032       10.2781      0.7753        
-  E=3             0.8370       7.6174       0.9228        
-  E=5             0.8807       6.5153       0.9710        
+  Local Epochs    Final R²     RMSE (dB)    MAE (dB)     R² / Central  
+  -------------------------------------------------------------------
+  E=1             0.7032       10.2781      8.1444       0.7753        
+  E=3             0.8370       7.6174       5.6971       0.9228        
+  E=5             0.8807       6.5153       4.9389       0.9710        
 
 ── BEST FL CONFIGURATION ───────────────────────────────────────────────────────
   Local epochs  : E=5
@@ -52,8 +53,12 @@ Dataset        : Indoor LoRaWAN, Hölderlinstraße Campus 8F, Siegen
   New (federated update) : 2,356 B/day/node
   Reduction factor       : 11.0×
   Our FL payload/round   : 52 B  (89 int8 params fit in 1 LoRaWAN packet)
+  Torres Sanchez FL      : 1,428 B/round (~28 messages)
 
 ── REFERENCE VALUES ────────────────────────────────────────────────────────────
   Supervisor LDPLSM-MW-EP (Obiri & Van Laerhoven, 2024) : R²=0.8219  RMSE=8.04 dB
+  PEP XGBoost (centralized)            
+                   : R²=0.9300
+  Torres Sanchez et al. FL (2024)                       : F1=94.77%
 
 ================================================================================
