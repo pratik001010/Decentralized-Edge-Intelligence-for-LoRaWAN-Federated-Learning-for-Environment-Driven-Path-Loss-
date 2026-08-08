@@ -12,26 +12,26 @@
     "n_params": 89
   },
   "data_summary": {
-    "raw_rows": 2079534,
+    "raw_rows": 206957,
     "anomalies_removed": 0,
     "null_dropped": 0,
-    "final_rows": 2079528,
+    "final_rows": 206957,
     "client_sample_counts": {
-      "ED0": 277531,
-      "ED1": 274660,
-      "ED2": 278728,
-      "ED3": 272897,
-      "ED4": 275528,
-      "ED5": 284278
+      "ED0": 34511,
+      "ED1": 34170,
+      "ED2": 34738,
+      "ED3": 34025,
+      "ED4": 34185,
+      "ED5": 35328
     }
   },
   "client_sample_counts": {
-    "ED0": 277531,
-    "ED1": 274660,
-    "ED2": 278728,
-    "ED3": 272897,
-    "ED4": 275528,
-    "ED5": 284278
+    "ED0": 34511,
+    "ED1": 34170,
+    "ED2": 34738,
+    "ED3": 34025,
+    "ED4": 34185,
+    "ED5": 35328
   },
   "reference_values": {
     "supervisor_LDPLSM_MW_EP_R2": 0.8219,
