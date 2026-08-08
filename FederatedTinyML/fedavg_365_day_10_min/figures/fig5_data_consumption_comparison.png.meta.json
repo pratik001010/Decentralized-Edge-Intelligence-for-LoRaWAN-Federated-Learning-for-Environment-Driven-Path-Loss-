@@ -1,6 +1,0 @@
-{
-  "caption": "Fig. 5: Data Consumption Comparison per Node over 7.1 Days (1 FL Round)",
-  "centralized_bytes": 123300,
-  "federated_bytes": 75183,
-  "reduction_factor": 1.64
-}
