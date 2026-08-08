@@ -40,9 +40,9 @@
     "torres_sanchez_F1": 0.9477
   },
   "centralized_baseline": {
-    "r2": 0.9070531129837036,
-    "rmse": 5.752004522796677,
-    "mae": 4.251182556152344
+    "r2": 0.9089,
+    "rmse": 5.6872,
+    "mae": 4.2512
   },
   "federated_results": {
     "1": {
