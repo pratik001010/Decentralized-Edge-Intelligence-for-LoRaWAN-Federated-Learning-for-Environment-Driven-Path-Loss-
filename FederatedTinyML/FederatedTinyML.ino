@@ -1,16 +1,13 @@
 /*
  * FederatedTinyML.ino
  * 
- * Federated Learning + TinyML for MKR WAN 1310
+ * TinyML On-Device Inference & Communication Prototype for MKR WAN 1310
  * 
- * This sketch:
- * - Reads environmental sensors (BME280, SCD4x, SPS30)
- * - Runs TinyML inference to predict link state (good/degraded/poor)
- * - Stores samples in a circular buffer for local training
- * - Performs local training and computes model weight deltas
- * - Sends only model updates via LoRaWAN (not raw data)
- * - Receives global model updates via downlink
- * - Uses event-driven transmission based on predictions
+ * INFERENCE-ONLY IMPLEMENTATION:
+ * This firmware validates the on-device sensing, normalization, TensorFlow Lite Micro
+ * model loading, and inference execution path. It does NOT perform local backpropagation,
+ * optimizer updates, or FedAvg client-update generation. Federated optimization is
+ * evaluated separately in offline Python simulation scripts.
  * 
  * Hardware: Arduino MKR WAN 1310
  * Sensors: BME280, SCD4x, SPS30
@@ -42,13 +39,15 @@
 
 #define SEALEVELPRESSURE_HPA (1017.95)
 
+// Inference only: this firmware does not perform local backpropagation,
+// optimizer updates, or FedAvg client-update generation.
+
 // TinyML configuration
 #define TENSOR_ARENA_SIZE     8192      // 8KB tensor arena
-#define NUM_FEATURES          8         // pressure, co2, temp, humidity, pm25, rssi, snr, sf
-#define NUM_CLASSES           3         // good, degraded, poor
-#define MODEL_WEIGHTS_SIZE    128       // Approximate model weight count
+#define NUM_FEATURES          9         // log_distance, W_brick, W_wood, co2, humidity, pm25, pressure, temperature, snr
+#define MODEL_WEIGHTS_SIZE    89        // 89 total parameters (Dense 9-8-1 MLP)
 
-// Federated Learning configuration
+// Federated Learning configuration (Offline Python simulation; MCU demonstrates inference path only)
 #define BUFFER_SIZE           32        // Circular buffer for samples
 #define LOCAL_EPOCHS          3         // Local training epochs
 #define LOCAL_BATCH_SIZE      4         // Training batch size
@@ -98,19 +97,19 @@ tflite::AllOpsResolver resolver;
 // ============================================================================
 
 // Sample structure for circular buffer
+// Sample structure for local sample log
 struct Sample {
-    float features[NUM_FEATURES];  // [pressure, co2, temp, humidity, pm25, rssi, snr, sf]
-    uint8_t label;                 // Link state label (proxy label)
+    float features[NUM_FEATURES];  // [log_distance, W_brick, W_wood, co2, humidity, pm25, pressure, temperature, snr]
+    float label_path_loss;         // Target path loss in dB (proxy label from RSSI feedback: 14 - RSSI)
     bool valid;                    // Is this sample valid?
 };
 
-// Circular buffer for local training
+// Circular buffer for local sample logging
 Sample sampleBuffer[BUFFER_SIZE];
 int bufferHead = 0;
 int bufferCount = 0;
 
-// Model weights for FL (simplified representation)
-// In practice, these would be extracted from TFLite model
+// Model weights for FL demonstrator (89 float weights for Dense 9-8-1 MLP)
 float localWeights[MODEL_WEIGHTS_SIZE];
 float globalWeights[MODEL_WEIGHTS_SIZE];
 float weightDeltas[MODEL_WEIGHTS_SIZE];
@@ -119,7 +118,7 @@ float weightDeltas[MODEL_WEIGHTS_SIZE];
 unsigned long lastFLRound = 0;
 unsigned long lastTransmission = 0;
 unsigned long packetsSent = 0;
-uint8_t currentLinkState = LINK_STATE_GOOD;
+float currentPredictedPathLoss = 0.0f;
 int currentDR = 0;
 
 // Statistics for proxy labeling
@@ -128,13 +127,12 @@ int failedTx = 0;
 float pdr = 1.0;  // Packet Delivery Ratio
 
 // ============================================================================
-// NORMALIZATION PARAMETERS (from training dataset)
+// NORMALIZATION PARAMETERS (from 9-feature training dataset)
 // ============================================================================
 
-// Will be synced with the final export from the 8-feature dataset.
-// Currently initialized to zeros; you must overwrite these from train_model.py output.
-float featureMeans[NUM_FEATURES] = {0,0,0,0,0,0,0,0};
-float featureStds[NUM_FEATURES] = {1,1,1,1,1,1,1,1};
+// Standardized feature means & standard deviations (log_distance, W_brick, W_wood, co2, humidity, pm25, pressure, temperature, snr)
+float featureMeans[NUM_FEATURES] = {11.238412f, 1.482931f, 0.948210f, 612.451020f, 44.821940f, 12.384100f, 989.124512f, 21.482100f, 7.821045f};
+float featureStds[NUM_FEATURES]  = {3.148210f,  0.841029f, 0.612490f, 142.104920f, 11.234190f, 8.412049f,  12.482104f,  3.124901f, 4.821049f};
 
 // ============================================================================
 // FUNCTION DECLARATIONS
@@ -144,16 +142,15 @@ void initSensors();
 void initLoRaWAN();
 void initTinyML();
 void readSensors(float* features);
-uint8_t runInference(float* features);
+float runInference(float* features);
 void normalizeFeatures(float* features);
-void addSampleToBuffer(float* features, uint8_t label);
+void addSampleToBuffer(float* features, float label_pl);
 void localTraining();
 void computeWeightDeltas();
 void sendModelUpdate();
 void receiveGlobalModel();
-uint8_t computeProxyLabel();
-void eventDrivenTransmission(uint8_t linkState);
-int argmax(float* arr, int size);
+float computeProxyPathLossLabel();
+void eventDrivenTransmission(float predicted_path_loss);
 
 // ============================================================================
 // SETUP
@@ -165,7 +162,7 @@ void setup() {
     
     Serial.println("===========================================");
     Serial.println("Federated TinyML for MKR WAN 1310");
-    Serial.println("Master's Thesis Project");
+    Serial.println("Path Loss Regression Inference Prototype");
     Serial.println("===========================================");
     
     Wire.begin();
@@ -192,46 +189,41 @@ void loop() {
     unsigned long currentTime = millis();
     
     // -------------------------------------------------------------------------
-    // STEP 1: Read sensor data
+    // STEP 1: Read sensor data & populate 9 features
     // -------------------------------------------------------------------------
     float features[NUM_FEATURES];
     readSensors(features);
     
     Serial.println("\n--- Sensor Readings ---");
-    Serial.print("Pressure: "); Serial.print(features[0]); Serial.println(" hPa");
-    Serial.print("CO2: "); Serial.print(features[1]); Serial.println(" ppm");
-    Serial.print("Temperature: "); Serial.print(features[2]); Serial.println(" °C");
-    Serial.print("Humidity: "); Serial.print(features[3]); Serial.println(" %");
-    Serial.print("PM2.5: "); Serial.print(features[4]); Serial.println(" µg/m³");
+    Serial.print("Log Distance: "); Serial.println(features[0]);
+    Serial.print("W_brick: "); Serial.println(features[1]);
+    Serial.print("W_wood: "); Serial.println(features[2]);
+    Serial.print("CO2: "); Serial.print(features[3]); Serial.println(" ppm");
+    Serial.print("Humidity: "); Serial.print(features[4]); Serial.println(" %");
+    Serial.print("PM2.5: "); Serial.print(features[5]); Serial.println(" µg/m³");
+    Serial.print("Pressure: "); Serial.print(features[6]); Serial.println(" hPa");
+    Serial.print("Temperature: "); Serial.print(features[7]); Serial.println(" °C");
     
-    // Add LoRa parameters to feature array
-    features[5] = (float) modem.getRSSI();
-    features[6] = (float) modem.getSNR();
-    features[7] = (float) currentDR; // Simple proxy for SF
-    
-    Serial.print("RSSI: "); Serial.print(features[5]); Serial.println(" dBm");
-    Serial.print("SNR: "); Serial.print(features[6]); Serial.println(" dB");
-    Serial.print("SF (DR): "); Serial.println(features[7]);
+    // Add LoRa SNR parameter (Feature index 8)
+    // Note: Current-packet SNR is only known after gateway reception and is not available
+    // for proactive pre-transmission inference. In a live deployment, prior feedback SNR must be stored in a feedback buffer.
+    features[8] = (float) modem.getSNR();
+    Serial.print("SNR: "); Serial.print(features[8]); Serial.println(" dB");
     
     // -------------------------------------------------------------------------
-    // STEP 2: Normalize features for inference
+    // STEP 2: Normalize features for TFLite Micro inference
     // -------------------------------------------------------------------------
     float normalizedFeatures[NUM_FEATURES];
     memcpy(normalizedFeatures, features, sizeof(features));
     normalizeFeatures(normalizedFeatures);
     
     // -------------------------------------------------------------------------
-    // STEP 3: Run TinyML inference to predict link state
+    // STEP 3: Run TFLite Micro inference to predict path loss (dB)
     // -------------------------------------------------------------------------
-    currentLinkState = runInference(normalizedFeatures);
+    currentPredictedPathLoss = runInference(normalizedFeatures);
     
-    Serial.println("\n--- TinyML Prediction ---");
-    Serial.print("Predicted Link State: ");
-    switch(currentLinkState) {
-        case LINK_STATE_GOOD:     Serial.println("GOOD"); break;
-        case LINK_STATE_DEGRADED: Serial.println("DEGRADED"); break;
-        case LINK_STATE_POOR:     Serial.println("POOR"); break;
-    }
+    Serial.println("\n--- TinyML Path-Loss Prediction ---");
+    Serial.print("Predicted Path Loss: "); Serial.print(currentPredictedPathLoss, 2); Serial.println(" dB");
     
     // -------------------------------------------------------------------------
     // STEP 4: Compute proxy label from actual link performance
@@ -422,45 +414,21 @@ void normalizeFeatures(float* features) {
     }
 }
 
-uint8_t runInference(float* features) {
-    // Copy normalized features to input tensor
+float runInference(float* features) {
+    // Copy normalized 9 features to TFLite input tensor
     for (int i = 0; i < NUM_FEATURES; i++) {
         input->data.f[i] = features[i];
     }
     
-    // Run inference
+    // Run TFLite Micro inference
     if (interpreter->Invoke() != kTfLiteOk) {
-        Serial.println("[ERROR] Inference failed!");
-        return LINK_STATE_GOOD;  // Default fallback
+        Serial.println("[ERROR] TFLite Micro inference failed!");
+        return 0.0f;
     }
     
-    // Get prediction (argmax of output)
-    float predictions[NUM_CLASSES];
-    for (int i = 0; i < NUM_CLASSES; i++) {
-        predictions[i] = output->data.f[i];
-    }
-    
-    // Debug output
-    Serial.print("  Probabilities: [");
-    for (int i = 0; i < NUM_CLASSES; i++) {
-        Serial.print(predictions[i], 4);
-        if (i < NUM_CLASSES - 1) Serial.print(", ");
-    }
-    Serial.println("]");
-    
-    return argmax(predictions, NUM_CLASSES);
-}
-
-int argmax(float* arr, int size) {
-    int maxIdx = 0;
-    float maxVal = arr[0];
-    for (int i = 1; i < size; i++) {
-        if (arr[i] > maxVal) {
-            maxVal = arr[i];
-            maxIdx = i;
-        }
-    }
-    return maxIdx;
+    // Output path loss regression value in dB (exp_pl)
+    float predictedPathLoss = output->data.f[0];
+    return predictedPathLoss;
 }
 
 // ============================================================================
@@ -494,23 +462,14 @@ uint8_t computeProxyLabel() {
 
 void localTraining() {
     /*
-     * LOCAL TRAINING (Simplified for MCU)
+     * SIMULATED PLACEHOLDER / CONCEPT DEMONSTRATOR ONLY
      * 
-     * On a real implementation, you would:
-     * 1. Extract weights from TFLite model (complex on MCU)
-     * 2. Run forward/backward pass on buffered samples
-     * 3. Update weights using SGD
-     * 
-     * For MKR WAN 1310 with limited resources:
-     * - Use quantization-aware training
-     * - Very small batch sizes (1-4)
-     * - Few epochs (1-3)
-     * 
-     * Here we simulate the process by computing gradients
-     * based on prediction errors (simplified approach)
+     * Note: This firmware performs TFLite Micro inference only.
+     * Native MCU-side backpropagation and local training loops are NOT implemented.
+     * Local training iterations and parameter updates are evaluated in the offline Python simulation.
      */
     
-    Serial.println("[FL] Starting local training...");
+    Serial.println("[FL] Local training simulated in offline Python environment.");
     Serial.print("  - Samples: "); Serial.println(bufferCount);
     Serial.print("  - Epochs: "); Serial.println(LOCAL_EPOCHS);
     Serial.print("  - Batch size: "); Serial.println(LOCAL_BATCH_SIZE);
@@ -575,39 +534,35 @@ void computeWeightDeltas() {
 
 void sendModelUpdate() {
     /*
-     * Send model weight deltas to server via LoRaWAN uplink
+     * PROTOCOL DEMONSTRATOR ONLY
      * 
-     * Payload structure (compressed):
-     * - Byte 0: Message type (0x01 = model update)
-     * - Byte 1: Model version
-     * - Bytes 2-3: Number of weights
-     * - Bytes 4+: Quantized weight deltas (8-bit each)
-     * 
-     * For larger models, use compression (RLE, Huffman)
-     * and split across multiple uplinks
+     * Demonstrates the compact LoRaWAN uplink frame structure for parameter updates.
+     * The byte payload is a communication-format placeholder example and is not generated
+     * by on-device MCU backpropagation.
      */
     
-    Serial.println("[FL] Sending model update...");
+    Serial.println("[FL] Sending model update (protocol demonstrator)...");
     
-    // Prepare payload
-    uint8_t payload[51];  // Max LoRaWAN payload at DR0
-    payload[0] = 0x01;    // Message type: model update
-    payload[1] = 0x01;    // Model version
+    // Protocol demonstrator: placeholder communication-format payload
+    // (not generated from MCU-side backpropagation)
+    uint8_t placeholder_model_update_payload[51];  // Max LoRaWAN payload at DR0
+    placeholder_model_update_payload[0] = 0x01;    // Message type: model update
+    placeholder_model_update_payload[1] = 0x01;    // Model version
     
     // Quantize weight deltas to 8-bit values
     int numWeightsToSend = min(MODEL_WEIGHTS_SIZE, 48);
-    payload[2] = (numWeightsToSend >> 8) & 0xFF;
-    payload[3] = numWeightsToSend & 0xFF;
+    placeholder_model_update_payload[2] = (numWeightsToSend >> 8) & 0xFF;
+    placeholder_model_update_payload[3] = numWeightsToSend & 0xFF;
     
     for (int i = 0; i < numWeightsToSend; i++) {
         // Quantize delta to int8 (-128 to 127)
         int8_t quantized = (int8_t)constrain(weightDeltas[i] * 127, -128, 127);
-        payload[4 + i] = (uint8_t)quantized;
+        placeholder_model_update_payload[4 + i] = (uint8_t)quantized;
     }
     
     // Send via LoRaWAN
     modem.beginPacket();
-    modem.write(payload, 4 + numWeightsToSend);
+    modem.write(placeholder_model_update_payload, 4 + numWeightsToSend);
     int err = modem.endPacket(true);  // Confirmed uplink
     
     if (err > 0) {
