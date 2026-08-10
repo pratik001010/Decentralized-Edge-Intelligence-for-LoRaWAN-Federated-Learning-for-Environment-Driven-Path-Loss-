@@ -48,15 +48,15 @@
 #define MODEL_WEIGHTS_SIZE    89        // 89 total parameters (Dense 9-8-1 MLP)
 
 // Federated Learning configuration (Offline Python simulation; MCU demonstrates inference path only)
-#define BUFFER_SIZE           32        // Circular buffer for samples
-#define LOCAL_EPOCHS          3         // Local training epochs
-#define LOCAL_BATCH_SIZE      4         // Training batch size
-#define FL_ROUND_INTERVAL     86400000  // FL round every 24 hours (ms)
-#define MIN_SAMPLES_FOR_TRAIN 16        // Minimum samples before training
+#define BUFFER_SIZE           144       // Daily sample log buffer (144 samples/day under 10-min sampling)
+#define LOCAL_EPOCHS          5         // Local training epochs (E=5)
+#define LOCAL_BATCH_SIZE      512       // Mini-batch size
+#define FL_ROUND_INTERVAL     613440000 // FL round every 7.1 days (613,440,000 ms)
+#define MIN_SAMPLES_FOR_TRAIN 144       // Minimum samples before training
 
 // Transmission configuration
-#define NORMAL_TX_INTERVAL    300000    // 5 minutes normal interval
-#define URGENT_TX_INTERVAL    60000     // 1 minute if link degraded
+#define NORMAL_TX_INTERVAL    600000    // 10 minutes normal interval (600,000 ms)
+#define URGENT_TX_INTERVAL    600000    // 10 minutes interval under 10-min protocol
 #define LINK_STATE_GOOD       0
 #define LINK_STATE_DEGRADED   1
 #define LINK_STATE_POOR       2
@@ -545,12 +545,12 @@ void sendModelUpdate() {
     
     // Protocol demonstrator: placeholder communication-format payload
     // (not generated from MCU-side backpropagation)
-    uint8_t placeholder_model_update_payload[51];  // Max LoRaWAN payload at DR0
+    uint8_t placeholder_model_update_payload[89];  // Single packet payload at DR5/SF7 (89 bytes)
     placeholder_model_update_payload[0] = 0x01;    // Message type: model update
     placeholder_model_update_payload[1] = 0x01;    // Model version
     
     // Quantize weight deltas to 8-bit values
-    int numWeightsToSend = min(MODEL_WEIGHTS_SIZE, 48);
+    int numWeightsToSend = min(MODEL_WEIGHTS_SIZE, 89);
     placeholder_model_update_payload[2] = (numWeightsToSend >> 8) & 0xFF;
     placeholder_model_update_payload[3] = numWeightsToSend & 0xFF;
     
