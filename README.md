@@ -87,7 +87,7 @@ FedAvg (mean R²=0.689) outperforms the centralized model (mean R²=0.613) on av
 
 Federated Learning reduces data volume per node by 1.64x (123,300 B → 75,183 B) and radio energy consumption by 11.36x (6,795.78 mJ → 597.99 mJ) over 7.1 days.
 
-![FL vs CL — data volume detail](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/25.png)
+![FL vs CL — data volume detail](https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/3cfedbdeb1db060d6699d5b6438fabb19c975581/pics/25.png)
 
 ## 13. Hardware Feasibility
 
@@ -95,19 +95,19 @@ The 89-parameter (int8-quantized) model update fits in a single LoRaWAN packet, 
 
 ![Hardware Feasibility — Duty Cycle](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/26.png)
 
-![Hardware Feasibility — Memory & Compute](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/27.png)
+![Hardware Feasibility — Memory & Compute](https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/3cfedbdeb1db060d6699d5b6438fabb19c975581/pics/27.png)
 
 ## 14. Conclusion
 
 FedAvg retains 96.9% of centralized accuracy while cutting radio energy use over 11x and data volume by 1.64x, confirming the feasibility of federated TinyML path-loss modeling on constrained LoRaWAN hardware.
 
-![Conclusion](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/28.png)
+![Conclusion](https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/3cfedbdeb1db060d6699d5b6438fabb19c975581/pics/28.png)
 
 ## 15. Future Work
 
 Planned next steps include testing advanced optimization algorithms (FedProx, SCAFFOLD) and real-world deployment with pilot testing.
 
-![Future Work](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/29.png)
+![Future Work](https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/3cfedbdeb1db060d6699d5b6438fabb19c975581/pics/29.png)
 
 ---
 
@@ -116,9 +116,9 @@ Planned next steps include testing advanced optimization algorithms (FedProx, SC
 ## 16. Appendices
 
 
- ![Appendice1](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/31.png)
+ ![Appendice1](https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/3cfedbdeb1db060d6699d5b6438fabb19c975581/pics/31.png)
  
-  ![Appendice2](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/32.png)
+  ![Appendice2](https://github.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/blob/3cfedbdeb1db060d6699d5b6438fabb19c975581/pics/32.png)
 
  ![Appendice3](https://raw.githubusercontent.com/pratik001010/Decentralized-Edge-Intelligence-for-LoRaWAN-Federated-Learning-for-Environment-Driven-Path-Loss-/26bb4ce307565a519ec256e37cc09648febfdb44/pics/33.png)
 
