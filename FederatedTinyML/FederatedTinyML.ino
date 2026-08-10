@@ -100,7 +100,7 @@ tflite::AllOpsResolver resolver;
 // Sample structure for local sample log
 struct Sample {
     float features[NUM_FEATURES];  // [log_distance, W_brick, W_wood, co2, humidity, pm25, pressure, temperature, snr]
-    float label_path_loss;         // Target path loss in dB (proxy label from RSSI feedback: 14 - RSSI)
+    float label_path_loss;         // Target path loss in dB (proxy label from RSSI feedback: 17.4 - RSSI)
     bool valid;                    // Is this sample valid?
 };
 
